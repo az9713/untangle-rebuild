@@ -388,7 +388,7 @@ cv.addEventListener("pointerdown", e => {             // C49
   const [mx, my] = mouseXY(e), st = hist[pos];
   let best = -1, bd = 0;
   st.pts.forEach((p, i) => { const dx = Math.trunc((p.x * TS) / p.d) - mx, dy = Math.trunc((p.y * TS) / p.d) - my, dd = dx * dx + dy * dy; if (best < 0 || dd < bd) { best = i; bd = dd; } });
-  if (best < 0 || bd > 144) return;                   // 12 px
+  if (best < 0 || bd > 144) return;                   // 12 px; A3 truncated screen positions
   ui.drag = best; ui.cursor = -1; setDragPos(mx, my);
   cv.setPointerCapture(e.pointerId); draw();
 });
@@ -409,7 +409,7 @@ cv.addEventListener("keydown", e => {
       const half = Math.trunc(TS / 2), dx = dir === 2 ? -half : dir === 3 ? half : 0, dy = dir === 0 ? -half : dir === 1 ? half : 0;
       setDragPos(Math.trunc((ui.x * TS) / ui.d) + dx, Math.trunc((ui.y * TS) / ui.d) + dy);
     } else {
-      if (ui.cursor < 0) ui.cursor = 0;
+      if (ui.cursor < 0) ui.cursor = 0;                 // A1 ev_f7ad8758
       const c = st.pts[ui.cursor]; let best = -1, bd = 0;
       st.pts.forEach((p, i) => {
         if (i === ui.cursor) return;
@@ -417,7 +417,7 @@ cv.addEventListener("keydown", e => {
         if (dx === 0 && dy === 0) return;
         const ok = [dy <= -Math.abs(dx), dy >= Math.abs(dx), Math.abs(dy) <= -dx, Math.abs(dy) <= dx][dir];
         if (!ok) return;
-        const dd = Math.floor((dx * dx + dy * dy) / ((p.d * c.d) * (p.d * c.d)));   // unsigned integer division, then float
+        const dd = Math.floor((dx * dx + dy * dy) / ((p.d * c.d) * (p.d * c.d)));   // A2 unsigned integer division, then float
         if (dd < bd || best < 0) { best = i; bd = dd; }
       });
       if (best >= 0) ui.cursor = best;
