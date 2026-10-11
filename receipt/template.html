@@ -36,7 +36,11 @@ iframe{width:100%;height:760px;border:1px solid var(--line);border-radius:8px;ba
 .stat b{display:block;color:var(--text);font-size:1.5rem}
 nav ol{columns:2;column-gap:28px;padding-left:20px;margin:6px 0}
 details summary{cursor:pointer;color:var(--teal)}
-@media (max-width:640px){nav ol{columns:1}}
+.cmp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+.cmp>div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.cmp h4{margin:0 0 6px;color:var(--text);font-size:.9rem}
+pre.code{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.45 ui-monospace,Consolas,monospace;color:var(--text)}
+@media (max-width:640px){nav ol{columns:1}.cmp{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -69,6 +73,7 @@ details summary{cursor:pointer;color:var(--teal)}
 <li><a href="#ledger">Tool ledger (from the transcript)</a></li>
 <li><a href="#rules">Rule audit</a></li>
 <li><a href="#limits">REA limits and unknown unknowns</a></li>
+<li><a href="#process">How the reverse engineering was done (added after the test)</a></li>
 </ol></nav>
 
 <h2 id="prompt">1. The prompt (verbatim)</h2>
@@ -131,7 +136,7 @@ details summary{cursor:pointer;color:var(--teal)}
 <tr><td>1. Target facts only from REA, with evidence IDs</td><td class="ok">Kept</td><td>Every claim row cites REA evidence. Where Ghidra had not defined a function, I decoded REA <code>read_bytes</code> output by hand and marked it "analyst decode".</td></tr>
 <tr><td>2. No web search, fetch or browser on the internet</td><td class="ok">Kept</td><td>Only the phase 1 binary download and the phase 5 key download went to the internet (PowerShell <code>Invoke-WebRequest</code>). The browser only opened <code>127.0.0.1</code>.</td></tr>
 <tr><td>3. No source, web version, help or write-up before the key</td><td class="ok">Kept</td><td>The index page was only matched by regex. The key folder was created after the phase 4 commit.</td></tr>
-<tr><td>4. No remembered facts</td><td class="part">Risk, not provable</td><td>Claude Code showed this notice during the run: "The model likely saw Untangle's public source code during training … score can still include remembered knowledge." Every claim cites REA evidence, and no claim was marked <code>prior-knowledge</code>, but I cannot prove that memory did not steer which REA calls I made or how I read pseudocode. Two places where general (not puzzle-specific) knowledge was used: recognising SHA-1 from its constants, and the 240-grey background placeholder (marked <code>gap</code>).</td></tr>
+<tr><td>4. No remembered facts</td><td class="part">Risk, not provable</td><td>Claude Code showed this notice during the run: "The model likely saw Untangle's public source code during training … score can still include remembered knowledge." Every claim cites REA evidence, and no claim was marked <code>prior-knowledge</code>, but I cannot prove that memory did not steer which REA calls I made or how I read pseudocode. Two places where general (not puzzle-specific) knowledge was used: recognising SHA-1 from its constants, and the 240-grey background placeholder (marked <code>gap</code>). <strong>Correction 2026-10-11:</strong> an audit after the test found 9 function names and 1 field name in the findings that match the source exactly and occur 0 times in REA's output. They came from memory and should have been marked <code>prior-knowledge</code>. See <a href="#process">section 11</a>.</td></tr>
 <tr><td>5. No subagents or advisor in phases 0–4</td><td class="ok">Kept</td><td>The first advisor call and the only subagent (the grader) came after the phase 4 commit.</td></tr>
 <tr><td>6. Only allowed non-REA tools, each logged</td><td class="part">Kept, with three judgement calls</td><td>(a) A PowerShell variable clash in phase 1 printed about 1 KB of the exe's raw bytes in an error message; nothing from it was used (logged). (b) Phase 4 needed a Chrome with a CDP port for the REA browser tools; that launch is not on the rule 6 list, so I logged it. (c) REA has no drag action, so in phase 6 the same PowerShell mouse input as on the original was also sent to the browser window; the prompt names PowerShell input for the PUZZLE window and PowerShell capture for the browser. Frames on the rebuild side came from REA as required.</td></tr>
 <tr><td>7. Gaps recorded, not filled</td><td class="ok">Kept</td><td>G1–G11 recorded. Placeholders in the code are marked <code>gap</code>.</td></tr>
@@ -150,6 +155,215 @@ details summary{cursor:pointer;color:var(--teal)}
 <li><strong>Where REA-guided analysis missed facts:</strong> of the grader's 22 "missed facts", 13 cite only <code>midend.c</code>/<code>windows.c</code> (key shortcuts, Shift+Tab, Restart, New-game undo, font weight, GDI pixel rules, tile-size rule), 3 cite both those files and <code>untangle.c</code>, 5 cite only <code>untangle.c</code> (cursor-search edge cases, keyboard pick-up without snap, first flash frame, 32-bit overflow), and 1 cites <code>misc.c</code>. So the largest share is shared front-end code; the 5 <code>untangle.c</code> details compare with 52 correct claims. The cause is scope: I followed the game's function table, not the shared front-end code.</li>
 <li><strong>Prior-knowledge risk</strong> (see rule 4): for a widely published open-source program, an "REA-only" score is an upper bound on what REA alone would give a model that has never seen the source.</li>
 </ol>
+
+<h2 id="process">11. How the reverse engineering was done</h2>
+<p class="meta">Added 2026-10-11, after the test, with the source key available. The key is used here only in the "source key" columns and in the name audit. Nothing in sections 1–10 depends on this section. Times are −0700 (the REA ledger in section 8 shows the same calls in UTC, 7 hours later).</p>
+
+<div class="card">
+<p><strong>Short answers.</strong></p>
+<ol>
+<li><strong>Did REA look at the binary?</strong> Yes. REA opened <code>target/untangle.exe</code> (167,496 bytes) itself. It did not use the source, the help or a web version. All 45 REA calls in phase 2 read this one file.</li>
+<li><strong>Which engine?</strong> Ghidra 12.1.4, run headless by REA 6.3.0. The evidence bundle lists one engine, <code>ghidra</code>, plus four REA-internal providers. Analysis profile: <code>analyzer_preset ghidra-default</code>, <code>import_mode ephemeral-source-immutable</code>, <code>process_launch official-headless-script-v1</code>. Ghidra imported a temporary copy; the exe bytes were never written.</li>
+<li><strong>Hopper?</strong> No. Hopper is a macOS disassembler. On Windows, REA's Hopper provider reports <code>unsupported_host</code> ("not supported on win32"; seen in the session-4 REA test). IDA was not installed (<code>not_configured</code>). Ghidra was the only engine available, and the only one used.</li>
+<li><strong>C or C++?</strong> C. Evidence from REA: the 8 assert paths in the binary end in <code>.c</code> (<code>/puzzles/untangle.c</code>, <code>random.c</code>, <code>midend.c</code>, <code>windows.c</code>, <code>misc.c</code>, <code>tree234.c</code>, <code>drawing.c</code>, <code>printing.c</code>; ev_050a2cb0). The imported DLLs are the C runtime (<code>VCRUNTIME140.dll</code>, 9 <code>api-ms-win-crt-*</code> DLLs) and Win32 (<code>USER32</code>, <code>KERNEL32</code>, <code>GDI32</code>, <code>COMDLG32</code>, <code>COMCTL32</code>). There is no <code>MSVCP140.dll</code> (the C++ standard library), and the strings contain no <code>type_info</code> or <code>std::</code>. The key confirms it: 74 <code>.c</code> files, 0 <code>.cpp</code> files. Note: Ghidra always writes C-like pseudocode, whatever the source language was.</li>
+<li><strong>Did REA recover the source code?</strong> No. Ghidra gave C-like <em>pseudocode</em>: functions named <code>FUN_140001080</code>, variables named <code>param_1</code>, <code>uVar2</code>, types such as <code>undefined8</code>, no comments, no macros, no struct fields. 7 of the game's 31 functions were not decompiled at all, because Ghidra had not defined them. The model (Claude Opus 5.5) read the pseudocode and the raw bytes, wrote 57 claims in English, and then wrote a new program in JavaScript. No C source was written at any step.</li>
+<li><strong>Did REA watch the original run?</strong> No. REA 6.3.0 cannot capture a Windows window (gap G1). The 16 REA calls after phase 2 were browser captures of the <em>rebuild</em> in Chrome. The left half of the GIF (the original) came from PowerShell <code>CopyFromScreen</code>, not from REA.</li>
+<li><strong>How much came from training memory?</strong> This cannot be measured as a percentage, because the same model did the analysis and holds the memory, and there was no control run with a model that has never seen this source. What can be measured is in 11.5: the <em>facts</em> are tied to REA output and are written in the shape of the compiled code; 10 <em>names</em> came from memory.</li>
+</ol>
+</div>
+
+<h3>11.1 Who did what</h3>
+<div class="scroll"><table>
+<tr><th>Step</th><th>Done by</th><th>Output</th></tr>
+<tr><td>Load the exe, find functions, disassemble, decompile, list strings, find cross-references, read bytes</td><td><span class="tag rea">REA + Ghidra</span></td><td>Pseudocode, assembly, strings, addresses, each saved as an evidence record with an ID (<code>ev_…</code>) and the exe's SHA-256</td></tr>
+<tr><td>Choose each question and each call; follow pointers from one function to the next</td><td><span class="tag out">model</span></td><td>The call sequence in 11.2</td></tr>
+<tr><td>Decode the pointer table and the 7 undefined functions from raw bytes</td><td><span class="tag out">model</span> (node scripts on REA output)</td><td>"Analyst decode" claims, for example C7, C20, C36</td></tr>
+<tr><td>Explain what each function does, give it a role, write the rules in English</td><td><span class="tag out">model</span></td><td><code>findings-before-key.md</code>: claims C1–C57, gaps G1–G11 (frozen 22:49:55)</td></tr>
+<tr><td>Write the rebuild</td><td><span class="tag out">model</span></td><td><code>rebuild/index.html</code>, 490 lines of plain JavaScript; 33 lines cite an evidence ID, 9 lines mark a <code>gap</code></td></tr>
+<tr><td>Screenshot and keyboard-test the rebuild</td><td><span class="tag rea">REA</span> (<code>capture_web_screenshot</code>, <code>capture_browser_scenario</code>)</td><td>4 calls in phase 4; 12 calls in phase 6 (11 GIF frames and 1 browser scenario)</td></tr>
+<tr><td>Run the original, drag points, capture its window</td><td><span class="tag out">PowerShell</span></td><td>Left half of the GIF</td></tr>
+<tr><td>Grade the claims against the source</td><td><span class="tag out">grader subagent</span> (Read/Grep/Glob only)</td><td><code>grading.md</code></td></tr>
+</table></div>
+
+<h3>11.2 The phase 2 call sequence (22:36:37 – 22:47:26, 45 REA calls, about 11 minutes)</h3>
+<ol>
+<li><strong>Open.</strong> <code>open_binary</code> (22:36:37): Ghidra imports the exe and runs auto-analysis. <code>binary_overview</code> (22:36:38, ev_dc3bb3d4): 457 procedures, 469 strings, 9 segments (<code>.text</code> 90,112 bytes, <code>.rdata</code>, <code>.data</code>, <code>.rsrc</code> and others).</li>
+<li><strong>Read the text in the file.</strong> <code>list_strings</code> (22:37:26, ev_050a2cb0) gave the version string, the menu texts, the error messages, the DLL names and the 8 assert paths. The assert paths were the first map: they name the source files linked into the exe.</li>
+<li><strong>Find the game's function table.</strong> <code>xrefs</code> (22:37:44) on the string <code>"Untangle"</code> at 0x14001800e (ev_54a33ea7) and on <code>"/puzzles/untangle.c"</code> at 0x140018a14 (ev_474fa8cb). The first led to a data table at 0x140017000. <code>read_bytes</code> of 512 bytes there (ev_f3e4cc63) gave the raw table; a node script split it into 8-byte pointers: 32 code-pointer slots that hold 31 different function addresses, from 0x140001080 to 0x140003f10, plus numbers such as 64 (tile size) and the preset list.</li>
+<li><strong>Decompile the table's functions.</strong> <code>batch_decompile</code> (22:38:09, ev_f7ad8758; an 87,013-byte record) returned pseudocode for 24 of the 31. For the other 7, Ghidra answered "No procedure exists at the requested address". <code>inspect_native_instruction</code> and <code>read_bytes</code> (22:39–22:42) gave their bytes, and the model decoded the x86-64 by hand (example 3 below).</li>
+<li><strong>Follow the calls out of the game code.</strong> <code>procedure_callees</code>, <code>procedure_callers</code> and more <code>batch_decompile</code> / <code>procedure_pseudo_code</code> calls (22:40–22:45) reached the random-number code (0x140015140, 0x140015270, 0x140015630; ev_da809602, ev_2287f35a, ev_0c928f90), the square root and crossing test (ev_571db767), the game-ID parser (0x140012de0, ev_cb816f3e, found through <code>search_procedures</code> for <code>strchr</code>, ev_08f9d4a5), the menu builder (0x14000aa38, ev_979e13f3, found from <code>xrefs</code> on <code>"&amp;Restart"</code>, ev_5fd758c5) and the seed maker (ev_951dd08d). <code>procedure_assembly</code> on the redraw function 0x1400039b0 (ev_ca98285d) checked the drawing order instruction by instruction.</li>
+<li><strong>Save and close the record.</strong> <code>export_evidence_bundle</code> (22:46:11) wrote all records to a 72 MB JSON file. <code>inspect_signature</code> (22:47:22) failed: it needs macOS. A last <code>read_bytes</code> (22:47:26) read the PE header, which the model parsed by hand for C3 and C4.</li>
+</ol>
+<p>Then the model wrote the findings (phase 3, frozen 22:49:55) and the rebuild (phase 4). The source was downloaded at 23:01:43, after both.</p>
+
+<h3>11.3 Three examples at three depths of evidence</h3>
+<p><strong>Example 1: a one-line function, pseudocode.</strong> This shows how much the compiler removes. REA's output has no name, no type and no field name; only the number 10 survives.</p>
+<div class="cmp">
+<div><h4>REA returned (ev_f7ad8758)</h4><pre class="code">void FUN_140001080(undefined8 param_1,
+    undefined8 param_2,undefined8 param_3,
+    undefined8 param_4)
+{
+  undefined4 *puVar1;
+
+  puVar1 = FUN_140004a60(4,param_2,
+                         param_3,param_4);
+  *puVar1 = 10;
+  return;
+}</pre></div>
+<div><h4>Model wrote (C17, C7)</h4><pre class="code">C7:  0x140001080 = "default params"
+     (role inferred: it is slot 1 of the
+      table and returns a new 4-byte block)
+C17: Default n = 10.</pre></div>
+<div><h4>Source key (untangle.c:135-142)</h4><pre class="code">static game_params *default_params(void)
+{
+    game_params *ret = snew(game_params);
+
+    ret-&gt;n = 10;
+
+    return ret;
+}</pre></div>
+</div>
+
+<p><strong>Example 2: the random-number limiter, pseudocode → JavaScript.</strong> The assert in the pseudocode carries the file name and the line number: <code>0x113</code> = 275, and line 275 of <code>random.c</code> is <code>assert(bits &lt; 32);</code>. The compiler joined <code>bits += 3</code> and <code>1L &lt;&lt; bits</code> into <code>8 &lt;&lt; b</code>; the rebuild copies the compiled form, not the source form.</p>
+<div class="cmp">
+<div><h4>REA returned (ev_0c928f90)</h4><pre class="code">ulonglong FUN_140015630(char *param_1,
+                        uint param_2)
+{
+  ...
+  uVar2 = 0xffffffff;
+  do {
+    uVar3 = uVar2;
+    uVar2 = uVar3 + 1;
+  } while (param_2 &gt;&gt; ((byte)uVar2 &amp; 0x1f) != 0);
+  if (0x1c &lt; uVar2) {
+    _wassert(L"bits &lt; 32",
+             L"/puzzles/random.c",0x113);
+  }
+  uVar1 = (ulonglong)(uint)(8 &lt;&lt; ((byte)uVar2
+          &amp; 0x1f)) / (ulonglong)param_2;
+  do {
+    uVar2 = FUN_140015270(param_1,uVar3 + 4);
+  } while ((int)uVar1 * param_2 &lt;= uVar2);
+  return uVar2 / uVar1;
+}</pre></div>
+<div><h4>Model wrote (rebuild/index.html:101-107)</h4><pre class="code">function randomUpto(rs, limit) {
+  // C13 ev_0c928f90 (0x140015630)
+  let b = 0;
+  while (Math.floor(limit / Math.pow(2, b))
+         !== 0) b++;
+  if (b &gt; 28) throw new Error("bits &lt; 32");
+  const divisor = Math.floor(
+    ((8 * Math.pow(2, b)) &gt;&gt;&gt; 0) / limit);
+  let v;
+  do { v = randomBits(rs, b + 3); }
+  while (divisor * limit &lt;= v);
+  return Math.floor(v / divisor);
+}</pre></div>
+<div><h4>Source key (random.c:266-286)</h4><pre class="code">unsigned long random_upto(random_state *state,
+                          unsigned long limit)
+{
+    int bits = 0;
+    unsigned long max, divisor, data;
+
+    while ((limit &gt;&gt; bits) != 0)
+        bits++;
+
+    bits += 3;
+    assert(bits &lt; 32);
+
+    max = 1L &lt;&lt; bits;
+    divisor = max / limit;
+    max = limit * divisor;
+
+    do {
+        data = random_bits(state, bits);
+    } while (data &gt;= max);
+
+    return data / divisor;
+}</pre></div>
+</div>
+
+<p><strong>Example 3: a function Ghidra did not decompile, raw bytes → hand decode.</strong> REA gave only 48 bytes. The model decoded them as x86-64 and followed the two <code>lea</code> targets to strings that <code>list_strings</code> had already listed.</p>
+<div class="cmp">
+<div><h4>REA returned (ev_4da3c117, read_bytes 0x140001290)</h4><pre class="code">8b0131c93dabaaaa2a488d15776d0100
+480f4dca83f804488d055b660100480f
+4dc1c3cccccccccccccccccccccccccc</pre></div>
+<div><h4>Model decoded (C20)</h4><pre class="code">mov    eax, [rcx]         ; n = first field
+xor    ecx, ecx           ; result = none
+cmp    eax, 0x2aaaaaab    ; 715,827,883
+lea    rdx, [0x140018017] ; "Number of points
+                          ;  must not be
+                          ;  unreasonably large"
+cmovge rcx, rdx           ; n &gt;= 715,827,883
+cmp    eax, 4
+lea    rax, [0x140017909] ; "Number of points
+                          ;  must be at least four"
+cmovge rax, rcx           ; n &gt;= 4: keep rcx
+ret
+
+C20: n &lt; 4 → "…at least four";
+     n ≥ 715,827,883 (0x2aaaaaab)
+       → "…unreasonably large"</pre></div>
+<div><h4>Source key (untangle.c:221-233)</h4><pre class="code">static const char *validate_params(
+    const game_params *params, bool full)
+{
+#ifndef EDITOR
+    if (params-&gt;n &lt; 4)
+        return "Number of points must be
+                at least four";
+#else
+    ...
+#endif
+    if (params-&gt;n &gt; INT_MAX / 3)
+        return "Number of points must not
+                be unreasonably large";
+    return NULL;
+}</pre></div>
+</div>
+<p class="meta">The source says <code>n &gt; INT_MAX / 3</code>. The compiler turned this into <code>n ≥ 0x2aaaaaab</code>. The claim C20 uses the compiled number, which the grader marked correct ("715,827,882 … equals n ≥ 715,827,883").</p>
+
+<h3>11.4 How the rebuild was made from the claims</h3>
+<p>The model wrote <code>rebuild/index.html</code> as one HTML file with plain JavaScript and a canvas. Each part copies the behaviour of one decompiled function: SHA-1 and the random-number code (C10–C15), the generator (C24–C29), the start circle (C30), the crossing test with 64-bit products through <code>BigInt</code> (C32), solve (C56), drawing (C37–C48) and input (C49–C55). Where REA gave no fact, the code has a placeholder marked <code>gap</code> (for example the background colour, G2, and the font, G6). Because the random-number code, the generator and the ID format were copied exactly, the same game ID gives the same puzzle as the original (fidelity L3, section 7).</p>
+
+<h3>11.5 What came from training memory: the measured part</h3>
+<p>Method: a script counted each source identifier in three places: the 72 MB REA evidence bundle (everything REA returned), the findings, and the rebuild. A name that is in the findings but never in REA's output did not come from REA.</p>
+<div class="scroll"><table>
+<tr><th>Name written in the findings</th><th>In REA bundle</th><th>In findings</th><th>Same name in the source key</th><th>REA showed it as</th></tr>
+<tr><td><code>random_new</code></td><td>0</td><td>2</td><td><code>random.c:210</code></td><td><code>FUN_140015140</code></td></tr>
+<tr><td><code>random_bits</code></td><td>0</td><td>2</td><td><code>random.c:234</code></td><td><code>FUN_140015270</code></td></tr>
+<tr><td><code>random_upto</code></td><td>0</td><td>4</td><td><code>random.c:266</code></td><td><code>FUN_140015630</code></td></tr>
+<tr><td><code>shuffle</code></td><td>0</td><td>3</td><td><code>misc.c:313</code></td><td><code>FUN_140005430</code></td></tr>
+<tr><td><code>validate_params</code></td><td>0</td><td>1</td><td><code>untangle.c:221</code></td><td>undefined bytes at 0x140001290</td></tr>
+<tr><td><code>validate_desc</code></td><td>0</td><td>1</td><td><code>untangle.c</code> (game table)</td><td><code>FUN_140002340</code></td></tr>
+<tr><td><code>new_game</code></td><td>0</td><td>1</td><td><code>untangle.c</code> (game table)</td><td><code>FUN_140002450</code></td></tr>
+<tr><td><code>interpret_move</code></td><td>0</td><td>1</td><td><code>untangle.c</code> (game table)</td><td><code>FUN_140002fd0</code></td></tr>
+<tr><td><code>execute_move</code></td><td>0</td><td>1</td><td><code>untangle.c</code> (game table)</td><td><code>FUN_140003600</code></td></tr>
+<tr><td><code>cheated</code> (state flag)</td><td>0</td><td>3</td><td><code>untangle.c:113</code></td><td>byte at offset +0x29</td></tr>
+</table></div>
+<p class="meta">Filtered out: <code>aux</code> (407 hits), <code>descriptor</code> (179) and <code>completed</code> (16) match words in REA's own record text, not in the binary. <code>midend</code>, <code>tree234</code> and <code>Redo</code> are in the binary's strings, so REA did give them. The source-only macro names <code>POINTDENSITY</code>, <code>COORDLIMIT</code> and <code>squarert</code>, and the type names <code>game_params</code>, <code>game_state</code>, <code>game_ui</code>, occur 0 times in the findings and the rebuild.</p>
+
+<div class="card">
+<p><strong>Signs that memory was used</strong></p>
+<ol>
+<li>The 10 names in the table above. REA showed these functions only as <code>FUN_…</code> addresses. The model wrote the exact names used in the Puzzle Collection source. A model with no memory of this code base would have had to invent names, and they would not match. These names should have been marked <code>prior-knowledge</code> (rule 4). They were not. This is a rule 4 break found after the test.</li>
+<li>The role list in C7 gives English roles for 29 of the 31 table addresses ("decode params", "interpret move", "execute move", "flash length" …). The grader wrote: "The role order agrees with the struct order." The roles were inferred from what each function body does, but knowledge of the framework's <code>struct game</code> very likely made this faster and surer. C7 does not name 3 slots (<code>free_params</code>, <code>dup_params</code>, <code>free_ui</code>; 2 addresses, 0x1400011b0 and 0x1400011c0). A full recall of the table would probably have named them too.</li>
+<li>The meaning of <code>tree234</code> as a sorted 2-3-4 tree (gap G8) came from its name in an assert path plus general knowledge, not from decompiling it.</li>
+</ol>
+<p><strong>General knowledge, not knowledge of this program</strong></p>
+<ol>
+<li>SHA-1 was named from its published constants (<code>67452301 efcdab89 …</code>), which REA returned in the pseudocode (C11).</li>
+<li><code>GetSysColor(4)</code> was named <code>COLOR_MENU</code>: the Windows SDK constant name for 4. The source also uses <code>COLOR_MENU</code> (<code>windows.c:342</code>).</li>
+<li>The 240-grey background placeholder (marked <code>gap</code> G2). The original turned out to show 240,240,240 on this laptop.</li>
+</ol>
+<p><strong>Signs that the facts came from the binary</strong></p>
+<ol>
+<li>Each of the 57 claims cites one or more REA evidence IDs, and 33 lines of the rebuild cite one.</li>
+<li>Claims use the <em>compiled</em> form, not the source form: C20 says <code>n ≥ 715,827,883 (0x2aaaaaab)</code> where the source says <code>n &gt; INT_MAX / 3</code>; C13 says <code>(8 &lt;&lt; b) / limit</code> and <code>random_bits(b + 3)</code> where the source says <code>bits += 3; max = 1L &lt;&lt; bits</code>; C24 says <code>floor(sqrt(3n))</code> where the source says <code>COORDLIMIT(n) squarert((n) * POINTDENSITY)</code>.</li>
+<li>The 2 partly-correct claims are errors of reading pseudocode: C50 says "floor" where C division truncates, and C52 misread an <code>if (cursor &lt; 0) cursor = 0</code> line.</li>
+<li>Memory did not fill the gaps: of the grader's 22 missed facts, 13 are in <code>midend.c</code>/<code>windows.c</code>, code that the model decompiled only in part (the game-ID parser, the seed maker and the menu builder). The claims leave those facts out; they do not recall them.</li>
+</ol>
+<p><strong>Conclusion.</strong> The facts in the findings are tied to REA output: each has an evidence ID, they use the compiled form, and 52 of 54 checkable claims match the source. The names, and probably some of the speed of the role mapping, came from memory of the public source. Memory may also have steered which addresses the model chose to read; that part cannot be measured from the record. So the score of 96.3 % is an upper bound for a model that has never seen this source. A clean measure needs a target that is not public, or a program written after the model's training cut-off.</p>
+</div>
 </main>
 </body>
 </html>
