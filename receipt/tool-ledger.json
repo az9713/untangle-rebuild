@@ -36,6 +36,10 @@
   {
    "time": "2026-10-11T06:21:11.000Z",
    "subject": "phase 6: side-by-side GIF"
+  },
+  {
+   "time": "2026-10-11T06:27:36.000Z",
+   "subject": "phase 7: receipt"
   }
  ],
  "counts": [
@@ -257,7 +261,7 @@
   {
    "phase": "phase 7: receipt",
    "tool": "PowerShell",
-   "n": 7
+   "n": 9
   },
   {
    "phase": "phase 7: receipt",
@@ -1430,6 +1434,20 @@
    "tool": "PowerShell",
    "rea": false,
    "reason": "Rebuild receipt and commit phase 7"
+  },
+  {
+   "time": "2026-10-11T06:29:56.209Z",
+   "phase": "phase 7: receipt",
+   "tool": "PowerShell",
+   "rea": false,
+   "reason": "Verify frozen findings and receipt table row counts"
+  },
+  {
+   "time": "2026-10-11T06:30:22.992Z",
+   "phase": "phase 7: receipt",
+   "tool": "PowerShell",
+   "rea": false,
+   "reason": "Correct receipt sentence, redact ledger JSON, commit"
   }
  ]
 }

@@ -31,3 +31,4 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 | 2026-10-10 23:02-23:18 | Agent (subagent_type reviewer, Read/Grep/Glob only) | grade claims and rebuild against key\ | Phase 5 step 2. Fresh agent, not a fork; inputs: findings-before-key.md, findings-addendum.md, rebuild\index.html, key\. Ran in the background while phase 6 ran. |
 | 2026-10-10 23:25 | node `receipt/build-ledger.js`, `receipt/build-receipt.js` | build the tool ledger from the transcript JSONL and assemble the receipt | Phase 7 steps 1-3 (ledger from transcript, redaction). |
 | 2026-10-10 23:27 | Chrome headless `--screenshot` (file:// receipt) | check that the receipt renders | Phase 7 visual check; local file only. |
+| 2026-10-10 23:31 | node builders (re-run) | correct receipt §10 item 7 (count of missed facts by file) and redact tool-ledger.json | Phase 7 correction after advisor review. |

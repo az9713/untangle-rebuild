@@ -54,7 +54,7 @@ details summary{cursor:pointer;color:var(--teal)}
 <div class="stat"><b>96.3 %</b>claims correct (52 / 54 checkable)</div>
 <div class="stat"><b>88 %</b>my prediction before the key</div>
 <div class="stat"><b>L3</b>fidelity reached (seed → same puzzle)</div>
-<div class="stat"><b>61 / 165</b>tool calls that were REA</div>
+<div class="stat"><b>61 / 167</b>tool calls that were REA</div>
 </div>
 
 <nav class="card"><strong>Contents</strong>
@@ -244,6 +244,7 @@ Rules for this phase:
 <tr><td><code>de11966</code></td><td>2026-10-10 23:02:09 -0700</td><td>phase 5: key downloaded (puzzles-20260923.616da16)</td></tr>
 <tr><td><code>298463f</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 5: grading</td></tr>
 <tr><td><code>c00a13e</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 6: side-by-side GIF</td></tr>
+<tr><td><code>328aed0</code></td><td>2026-10-10 23:27:36 -0700</td><td>phase 7: receipt</td></tr>
 </table></div>
 
 <h2 id="hashes">3. Hashes</h2>
@@ -852,7 +853,7 @@ loadId(q || &quot;10#&quot; + randomSeed());
 <tr><td><code>Bash</code></td><td><span class="tag out">outside REA</span></td><td>1</td><td>4</td><td></td><td></td><td></td><td></td><td>1</td><td></td><td>6</td></tr>
 <tr><td><code>Edit</code></td><td><span class="tag out">outside REA</span></td><td></td><td></td><td></td><td></td><td>3</td><td></td><td></td><td>1</td><td>4</td></tr>
 <tr><td><code>Grep</code></td><td><span class="tag out">outside REA</span></td><td></td><td></td><td></td><td></td><td></td><td>1</td><td></td><td></td><td>1</td></tr>
-<tr><td><code>PowerShell</code></td><td><span class="tag out">outside REA</span></td><td>1</td><td>6</td><td>8</td><td>2</td><td>8</td><td>3</td><td>24</td><td>7</td><td>59</td></tr>
+<tr><td><code>PowerShell</code></td><td><span class="tag out">outside REA</span></td><td>1</td><td>6</td><td>8</td><td>2</td><td>8</td><td>3</td><td>24</td><td>9</td><td>61</td></tr>
 <tr><td><code>Read</code></td><td><span class="tag out">outside REA</span></td><td>1</td><td></td><td>4</td><td></td><td>4</td><td></td><td>7</td><td>2</td><td>18</td></tr>
 <tr><td><code>Skill</code></td><td><span class="tag out">outside REA</span></td><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>1</td></tr>
 <tr><td><code>ToolSearch</code></td><td><span class="tag out">outside REA</span></td><td></td><td></td><td>2</td><td></td><td>1</td><td></td><td></td><td></td><td>3</td></tr>
@@ -874,7 +875,7 @@ loadId(q || &quot;10#&quot; + randomSeed());
 <tr><td><code>search_procedures</code></td><td><span class="tag rea">REA</span></td><td></td><td></td><td>1</td><td></td><td></td><td></td><td></td><td></td><td>1</td></tr>
 <tr><td><code>search_strings</code></td><td><span class="tag rea">REA</span></td><td></td><td></td><td>1</td><td></td><td></td><td></td><td></td><td></td><td>1</td></tr>
 <tr><td><code>xrefs</code></td><td><span class="tag rea">REA</span></td><td></td><td></td><td>4</td><td></td><td></td><td></td><td></td><td></td><td>4</td></tr></table></div>
-<details><summary>Every non-REA call with its stated reason (165 − 61 calls)</summary>
+<details><summary>Every non-REA call with its stated reason (167 − 61 calls)</summary>
 <div class="scroll"><table><tr><th>Time (UTC)</th><th>Phase</th><th>Tool</th><th>Reason (the call's description field)</th></tr>
 <tr><td>05:33:46</td><td>phase 0: setup</td><td><code>Skill</code></td><td></td></tr>
 <tr><td>05:33:55</td><td>phase 0: setup</td><td><code>Read</code></td><td></td></tr>
@@ -980,6 +981,8 @@ loadId(q || &quot;10#&quot; + randomSeed());
 <tr><td>06:26:17</td><td>phase 7: receipt</td><td><code>PowerShell</code></td><td>Render the receipt with headless Chrome to a screenshot</td></tr>
 <tr><td>06:26:59</td><td>phase 7: receipt</td><td><code>Read</code></td><td></td></tr>
 <tr><td>06:27:31</td><td>phase 7: receipt</td><td><code>PowerShell</code></td><td>Rebuild receipt and commit phase 7</td></tr>
+<tr><td>06:29:56</td><td>phase 7: receipt</td><td><code>PowerShell</code></td><td>Verify frozen findings and receipt table row counts</td></tr>
+<tr><td>06:30:22</td><td>phase 7: receipt</td><td><code>PowerShell</code></td><td>Correct receipt sentence, redact ledger JSON, commit</td></tr>
 </table></div></details>
 <details><summary>tool-log.md (the hand-kept log the prompt asked for)</summary><pre class="verbatim">﻿# Tool log (non-REA tool uses)
 
@@ -1014,6 +1017,7 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 | 2026-10-10 23:02-23:18 | Agent (subagent_type reviewer, Read/Grep/Glob only) | grade claims and rebuild against key\ | Phase 5 step 2. Fresh agent, not a fork; inputs: findings-before-key.md, findings-addendum.md, rebuild\index.html, key\. Ran in the background while phase 6 ran. |
 | 2026-10-10 23:25 | node `receipt/build-ledger.js`, `receipt/build-receipt.js` | build the tool ledger from the transcript JSONL and assemble the receipt | Phase 7 steps 1-3 (ledger from transcript, redaction). |
 | 2026-10-10 23:27 | Chrome headless `--screenshot` (file:// receipt) | check that the receipt renders | Phase 7 visual check; local file only. |
+| 2026-10-10 23:31 | node builders (re-run) | correct receipt §10 item 7 (count of missed facts by file) and redact tool-ledger.json | Phase 7 correction after advisor review. |
 </pre></details>
 
 <h2 id="rules">9. Rule audit</h2>
@@ -1037,7 +1041,7 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 <li><strong>Results are larger than the client's tool-result limit.</strong> Most decompile, string and screenshot results (55–140 K characters) were saved to files and read with node; the 10 MB MCP budget was never the limit.</li>
 <li><strong>The exported evidence bundle carries records from earlier sessions</strong> (8 of 49 records were from the session-4 REA-on-REA run; <code>evidence/questions.md</code> says 7, which is a miscount) and is 72 MB for 49 records, mostly inline payloads.</li>
 <li><strong><code>capture_browser_scenario</code> has no drag action</strong>, so REA could test keyboard play to a win but not mouse dragging.</li>
-<li><strong>Where REA-guided analysis missed facts:</strong> all 22 "missed facts" from the grader are in the midend or the Windows front end (key shortcuts, Space vs Enter, Shift+Tab, Restart behaviour, font weight, GDI pixel rules). The game file itself (<code>untangle.c</code>) was covered almost completely. The cause is scope: I followed the game's function table, not the shared front-end code.</li>
+<li><strong>Where REA-guided analysis missed facts:</strong> of the grader's 22 "missed facts", 13 cite only <code>midend.c</code>/<code>windows.c</code> (key shortcuts, Shift+Tab, Restart, New-game undo, font weight, GDI pixel rules, tile-size rule), 3 cite both those files and <code>untangle.c</code>, 5 cite only <code>untangle.c</code> (cursor-search edge cases, keyboard pick-up without snap, first flash frame, 32-bit overflow), and 1 cites <code>misc.c</code>. So the largest share is shared front-end code; the 5 <code>untangle.c</code> details compare with 52 correct claims. The cause is scope: I followed the game's function table, not the shared front-end code.</li>
 <li><strong>Prior-knowledge risk</strong> (see rule 4): for a widely published open-source program, an "REA-only" score is an upper bound on what REA alone would give a model that has never seen the source.</li>
 </ol>
 </main>

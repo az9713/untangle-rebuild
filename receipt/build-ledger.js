@@ -21,5 +21,6 @@ for (const line of fs.readFileSync(jsonl, "utf8").split("\n")) {
 const byKey = {};
 for (const r of rows) { const k = r.phase + "|" + r.tool; byKey[k] = (byKey[k] || 0) + 1; }
 const counts = Object.entries(byKey).map(([k, n]) => { const [phase, tool] = k.split("|"); return { phase, tool, n }; });
-fs.writeFileSync(out, JSON.stringify({ transcript: "<session-id>.jsonl", commits: commits.map(c => ({ time: new Date(c.t).toISOString(), subject: c.s })), counts, calls: rows }, null, 1));
+const redact = s => s.replace(/(Users[\\/]+)<user>/gi, "$1<user>").replace(/Users-<user>/gi, "Users-<user>").replace(/<session-id>/g, "<session-id>").replace(/<session-id-2>/g, "<session-id-2>");
+fs.writeFileSync(out, redact(JSON.stringify({ transcript: "<session-id>.jsonl", commits: commits.map(c => ({ time: new Date(c.t).toISOString(), subject: c.s })), counts, calls: rows }, null, 1)));
 console.log(`calls ${rows.length}, rea ${rows.filter(r => r.rea).length}, non-rea ${rows.filter(r => !r.rea).length}`);
