@@ -18,3 +18,6 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 | 2026-10-10 22:53 | Chrome (PID 46688, isolated profile, CDP port 9333) | browser for REA capture tools | Phase 4 step 5: REA capture_web_screenshot / capture_browser_scenario need a loopback CDP endpoint. |
 | 2026-10-10 22:54 | PowerShell `Invoke-WebRequest http://127.0.0.1:9333/json/list` | find the CDP target ID | Phase 4 step 5 (list_browser_targets would also do it). |
 | 2026-10-10 22:55-22:57 | node (`png.js`, `scen.js`) | extract PNGs from REA results | Phase 4 step 5: save REA captures in evidence\. |
+| 2026-10-10 23:01 | PowerShell `[regex]::Matches` on saved index page | find the source archive link | Phase 5 step 1. Matches: puzzles.zip, puzzles.tar.gz; git link https://git.tartarus.org/?p=simon/puzzles.git |
+| 2026-10-10 23:01 | PowerShell `Invoke-WebRequest` | download puzzles.tar.gz into key\ | Phase 5 step 1 (key download, allowed by rule 2) |
+| 2026-10-10 23:02 | `C:\Windows\System32\tar.exe` | list and extract the key | Phase 5 step 1. Top folder puzzles-20260923.616da16 = binary version |
