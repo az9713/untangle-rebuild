@@ -11,10 +11,15 @@ Then it downloaded the source code as an answer key. A separate grader agent mar
 - **Fidelity:** L3. The same game ID gives the same puzzle as the original. The grader checked the code line by line, and a side-by-side run (`receipt/side-by-side.gif`) showed it.
 - **Prior knowledge:** the model has probably seen this public source in training. An audit after the test found 10 function and field names in the findings (for example `random_upto`, `interpret_move`) that occur 0 times in REA's output. They came from memory. So 96.3 % is the highest score that REA alone could explain. Receipt section 11 gives the details.
 
+## Live pages
+
+- **Receipt:** https://az9713.github.io/untangle-rebuild/receipt/rebuild-receipt.html
+- **Playable rebuild:** https://az9713.github.io/untangle-rebuild/rebuild/index.html
+
 ## Where to start
 
-1. Download `receipt/rebuild-receipt.html` and open it in a browser. It contains the prompt, the timeline, all claims with verdicts, the GIF, a playable copy of the rebuild, the tool ledger, the rule audit and section 11, "How the reverse engineering was done".
-2. To play the rebuild alone, open `rebuild/index.html`. Type a game ID such as `10#123456789012345` and select "Load game ID / seed".
+1. Open the receipt (live link above, or `receipt/rebuild-receipt.html`). It contains the prompt, the timeline, all claims with verdicts, the GIF, a playable copy of the rebuild, the tool ledger, the rule audit and section 11, "How the reverse engineering was done".
+2. To play the rebuild alone, open the live rebuild link above, or `rebuild/index.html`. Type a game ID such as `10#123456789012345` and select "Load game ID / seed".
 
 ## Layout
 
