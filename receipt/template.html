@@ -47,7 +47,7 @@ pre.code{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.45 ui-
 <main>
 <h1>Untangle, rebuilt from REA evidence only: receipt</h1>
 <p class="meta">Personal data removed: the Windows user name is shown as <code>&lt;user&gt;</code> and the session ID as <code>&lt;session-id&gt;</code>. This also applies inside the prompt below; that is the only change to it.</p>
-<p class="meta">Date: 2026-10-10. Host: Windows 11, win32 x64, 125 % display scale. Agent: Claude Code, model Opus 5.5 (<code>claude-opus-5-5</code>). Tool under test: REA (<code>rea-agents</code>) 6.3.0 with Ghidra 12.1.4 (Windows x64 P0, read-only). Target: <code>untangle.exe</code> "Version 20260923.616da16" from Simon Tatham's Portable Puzzle Collection (MIT licence). Key: source release <code>puzzles-20260923.616da16</code>. Work folder: <code>C:\Users\<user>\Downloads\REA\rebuild-untangle</code> (git, local only, not pushed).</p>
+<p class="meta">Date: 2026-10-10. Host: Windows 11, win32 x64, 125 % display scale. Agent: Claude Code, model Opus 5.5 (<code>claude-opus-5-5</code>). Tool under test: REA (<code>rea-agents</code>) 6.3.0 with Ghidra 12.1.4 (Windows x64 P0, read-only). Target: <code>untangle.exe</code> "Version 20260923.616da16" from Simon Tatham's Portable Puzzle Collection (MIT licence). Key: source release <code>puzzles-20260923.616da16</code>. Work folder: <code>C:\Users\&lt;user&gt;\Downloads\REA\rebuild-untangle</code> (git, local only, not pushed).</p>
 
 <div class="card">
 <p><strong>What this page is.</strong> A record of one run in which an agent rebuilt the puzzle game Untangle as a web page, using only facts that REA extracted from the shipped Windows binary. The agent froze its findings in a git commit, then downloaded the source code as the answer key, and a separate grader agent marked every claim against it.</p>
@@ -81,6 +81,7 @@ pre.code{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.45 ui-
 
 <h2 id="timeline">2. Timeline from git log</h2>
 <p>Commit times are the timeline proof. The findings commit (<strong>phase 3</strong>, 22:49:55) comes before the key download (23:01:43, committed 23:02:09 as "phase 5: key downloaded"). Phase 6 ran while the phase 5 grader agent ran in the background; both were committed at 23:21:11.</p>
+<p class="meta">On 2026-10-11 the history was rewritten once, before the first push, to remove personal data. Commit times and the content of <code>findings-before-key.md</code> did not change; commit hashes did. Older files (<code>grading.md</code>, <code>findings-addendum.md</code>, <code>key/KEY-PROVENANCE.md</code>) use the old hashes. <code>README.md</code> maps each old hash to the new one.</p>
 <div class="scroll"><table><tr><th>Hash</th><th>Commit time (−0700)</th><th>Subject</th></tr>
 {{COMMITS}}
 </table></div>
@@ -123,7 +124,7 @@ pre.code{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.45 ui-
 </table></div>
 
 <h2 id="ledger">8. Tool ledger (built by a script from the transcript)</h2>
-<p><code>receipt/build-ledger.js</code> read every <code>tool_use</code> entry in the session transcript <code>~/.claude/projects/C--Users-<user>-Downloads-REA/&lt;session-id&gt;.jsonl</code> and put each call in the phase of the first commit at or after it. Calls made after the ledger run (the last few in phase 7) are not counted. The grader subagent's own 45 Read/Grep/Glob calls are in its separate transcript and are not counted here.</p>
+<p><code>receipt/build-ledger.js</code> read every <code>tool_use</code> entry in the session transcript <code>~/.claude/projects/C--Users-&lt;user&gt;-Downloads-REA/&lt;session-id&gt;.jsonl</code> and put each call in the phase of the first commit at or after it. Calls made after the ledger run (the last few in phase 7) are not counted. The grader subagent's own 45 Read/Grep/Glob calls are in its separate transcript and are not counted here.</p>
 <div class="scroll"><table>{{LEDGER}}</table></div>
 <details><summary>Every non-REA call with its stated reason ({{NALL}} − {{NREA}} calls)</summary>
 <div class="scroll"><table><tr><th>Time (UTC)</th><th>Phase</th><th>Tool</th><th>Reason (the call's description field)</th></tr>

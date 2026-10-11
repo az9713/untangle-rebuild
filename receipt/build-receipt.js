@@ -41,7 +41,10 @@ let html = fs.readFileSync(path.join(root, "receipt/template.html"), "utf8")
   .replace("{{GAPS}}", gapRows).replace("{{LEDGER}}", ledgerTable).replace("{{NONREA}}", nonRea).replace("{{GIF}}", gif)
   .replace("{{REBUILD}}", esc(rebuild).replace(/"/g, "&quot;")).replace("{{FBKSHA}}", fbkSha).replace("{{BINSHA}}", binSha)
   .replace("{{BUNDLESHA}}", bundleSha).replace(/\{\{NREA\}\}/g, nRea).replace(/\{\{NALL\}\}/g, nAll).replace("{{TOOLLOG}}", esc(toolLog));
-// Personal data removal: user name in paths and the session ID.
-html = html.replace(/(Users[\\/]+)<user>/gi, "$1&lt;user&gt;").replace(/Users-<user>/gi, "Users-&lt;user&gt;").replace(/The user sent/g, "&lt;user&gt; sent").replace(/<session-id>/g, "&lt;session-id&gt;").replace(/<session-id-2>/g, "&lt;session-id-2&gt;");
+// Personal data removal: the login name (read at run time, so it is not in this file) and every UUID (session IDs).
+// "Simon Tatham" (the puzzle author) and his git URL "?p=simon/puzzles.git" are kept.
+const user = require("os").userInfo().username;
+const userRe = new RegExp(`(Users[\\\\/]+|Users-|(?<!p=)\\b)${user}\\b(?!\\s*Tatham)`, "gi");
+html = html.replace(userRe, "$1&lt;user&gt;").replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "&lt;session-id&gt;");
 fs.writeFileSync(path.join(root, "receipt/rebuild-receipt.html"), html);
-console.log("written", html.length, "bytes; leftover '<user>' in paths:", (html.match(/Users[\\/]+<user>/gi) || []).length);
+console.log("written", html.length, "bytes; leftover login name:", (html.match(userRe) || []).length);

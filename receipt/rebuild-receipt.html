@@ -239,18 +239,20 @@ Rules for this phase:
 
 <h2 id="timeline">2. Timeline from git log</h2>
 <p>Commit times are the timeline proof. The findings commit (<strong>phase 3</strong>, 22:49:55) comes before the key download (23:01:43, committed 23:02:09 as "phase 5: key downloaded"). Phase 6 ran while the phase 5 grader agent ran in the background; both were committed at 23:21:11.</p>
+<p class="meta">On 2026-10-11 the history was rewritten once, before the first push, to remove personal data. Commit times and the content of <code>findings-before-key.md</code> did not change; commit hashes did. Older files (<code>grading.md</code>, <code>findings-addendum.md</code>, <code>key/KEY-PROVENANCE.md</code>) use the old hashes. <code>README.md</code> maps each old hash to the new one.</p>
 <div class="scroll"><table><tr><th>Hash</th><th>Commit time (−0700)</th><th>Subject</th></tr>
-<tr><td><code>9eff675</code></td><td>2026-10-10 22:34:26 -0700</td><td>phase 0: setup</td></tr>
-<tr><td><code>7cd33d8</code></td><td>2026-10-10 22:36:29 -0700</td><td>phase 1: binary</td></tr>
-<tr><td><code>627c2b6</code></td><td>2026-10-10 22:48:25 -0700</td><td>phase 2: REA analysis</td></tr>
-<tr><td><code>fa61c44</code></td><td>2026-10-10 22:49:55 -0700</td><td>phase 3: findings before key</td></tr>
-<tr><td><code>91814f6</code></td><td>2026-10-10 22:58:21 -0700</td><td>phase 4: rebuild</td></tr>
-<tr><td><code>609cb2e</code></td><td>2026-10-10 22:58:34 -0700</td><td>phase 4: rebuild (addendum citations)</td></tr>
-<tr><td><code>de11966</code></td><td>2026-10-10 23:02:09 -0700</td><td>phase 5: key downloaded (puzzles-20260923.616da16)</td></tr>
-<tr><td><code>298463f</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 5: grading</td></tr>
-<tr><td><code>c00a13e</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 6: side-by-side GIF</td></tr>
-<tr><td><code>328aed0</code></td><td>2026-10-10 23:27:36 -0700</td><td>phase 7: receipt</td></tr>
-<tr><td><code>fde4f3e</code></td><td>2026-10-10 23:30:27 -0700</td><td>phase 7: receipt (correction)</td></tr>
+<tr><td><code>19d4b6d</code></td><td>2026-10-10 22:34:26 -0700</td><td>phase 0: setup</td></tr>
+<tr><td><code>f5f4f86</code></td><td>2026-10-10 22:36:29 -0700</td><td>phase 1: binary</td></tr>
+<tr><td><code>ac734b8</code></td><td>2026-10-10 22:48:25 -0700</td><td>phase 2: REA analysis</td></tr>
+<tr><td><code>3f51ccb</code></td><td>2026-10-10 22:49:55 -0700</td><td>phase 3: findings before key</td></tr>
+<tr><td><code>443a3bf</code></td><td>2026-10-10 22:58:21 -0700</td><td>phase 4: rebuild</td></tr>
+<tr><td><code>e290fc8</code></td><td>2026-10-10 22:58:34 -0700</td><td>phase 4: rebuild (addendum citations)</td></tr>
+<tr><td><code>eb4d719</code></td><td>2026-10-10 23:02:09 -0700</td><td>phase 5: key downloaded (puzzles-20260923.616da16)</td></tr>
+<tr><td><code>e02af54</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 5: grading</td></tr>
+<tr><td><code>5c1e65a</code></td><td>2026-10-10 23:21:11 -0700</td><td>phase 6: side-by-side GIF</td></tr>
+<tr><td><code>6135b70</code></td><td>2026-10-10 23:27:36 -0700</td><td>phase 7: receipt</td></tr>
+<tr><td><code>03fb5e5</code></td><td>2026-10-10 23:30:27 -0700</td><td>phase 7: receipt (correction)</td></tr>
+<tr><td><code>c049fc6</code></td><td>2026-10-11 06:27:05 -0700</td><td>post-test: receipt section 11, how the reverse engineering was done</td></tr>
 </table></div>
 
 <h2 id="hashes">3. Hashes</h2>
@@ -1003,7 +1005,7 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 | 2026-10-10 22:35 | PowerShell `[regex]::Matches` | extract exe link | Phase 1 step 1. Regexes logged in target/PROVENANCE.md |
 | 2026-10-10 22:35 | PowerShell `Invoke-WebRequest` | download untangle.exe into target\ | Phase 1 step 2 |
 | 2026-10-10 22:36 | PowerShell `Get-FileHash`, `Get-Item` | SHA-256 and size | Phase 1 step 3. **Incident:** a variable-name clash (`$r` = `$R` in PowerShell) made one command print about 1 KB of the raw exe bytes as an error message. The visible bytes include the PE header and section names. No fact from that output is used; Phase 2 gets identity facts from REA only. |
-| 2026-10-10 22:37 | (note) | explain the curl failures | &lt;user&gt; sent a screenshot (`Downloads\Screenshot 2026-10-10 223628.png`): the antivirus Real-Time Protection blocked the Bash `curl` command as "Trojan.Downloader.CLI" (heuristic on the command line). The PowerShell `Invoke-WebRequest` route was not blocked. Use it for the phase 5 key download too. |
+| 2026-10-10 22:37 | (note) | explain the curl failures | The user sent a screenshot (`Downloads\Screenshot 2026-10-10 223628.png`): the antivirus Real-Time Protection blocked the Bash `curl` command as "Trojan.Downloader.CLI" (heuristic on the command line). The PowerShell `Invoke-WebRequest` route was not blocked. Use it for the phase 5 key download too. |
 | 2026-10-10 22:38-22:48 | node (scratchpad scripts) | read large REA results | Read saved REA tool-result JSON (strings, decompile) without loading them in full; decode game-descriptor qwords; transcribe FUN_140003f30 pseudocode to JS to tabulate it; parse PE header bytes from REA read_bytes; build evidence index from the REA bundle. Input data: REA outputs only. |
 | 2026-10-10 22:52 | node `rebuild/selfcheck.js` | test own rebuild logic | Phase 4 self-check (no target facts involved). |
 | 2026-10-10 22:53 | node static server (`serve.js`, PID 7056) | serve rebuild\ on 127.0.0.1:8765 | Phase 4 step 5: local static server for REA browser capture. |
