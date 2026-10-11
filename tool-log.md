@@ -29,3 +29,5 @@ Each row: time, tool, job, reason. REA tool calls are not listed here; the recei
 | 2026-10-10 23:16 | ImageMagick 7.1.1 `magick.exe` | crop rebuild frames, compose pairs with labels, assemble receipt\side-by-side.gif | Phase 6 step 5 (GIF assembly). |
 | 2026-10-10 23:17 | PowerShell Stop-Process by saved PID (41132, 46688, 7056) | stop original, Chrome, server | Cleanup. No kill by name. |
 | 2026-10-10 23:02-23:18 | Agent (subagent_type reviewer, Read/Grep/Glob only) | grade claims and rebuild against key\ | Phase 5 step 2. Fresh agent, not a fork; inputs: findings-before-key.md, findings-addendum.md, rebuild\index.html, key\. Ran in the background while phase 6 ran. |
+| 2026-10-10 23:25 | node `receipt/build-ledger.js`, `receipt/build-receipt.js` | build the tool ledger from the transcript JSONL and assemble the receipt | Phase 7 steps 1-3 (ledger from transcript, redaction). |
+| 2026-10-10 23:27 | Chrome headless `--screenshot` (file:// receipt) | check that the receipt renders | Phase 7 visual check; local file only. |

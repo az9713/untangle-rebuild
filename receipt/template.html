@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Untangle Rebuild Receipt</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--text2:#cbd5e1;--muted:#94a3b8;--orange:#fb923c;--teal:#2dd4bf;--line:#334155;--red:#f87171;--green:#4ade80;--amber:#fbbf24}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text2);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{color:var(--text);font-size:1.7rem;line-height:1.25;margin:0 0 8px}
+h2{color:var(--text);font-size:1.25rem;margin:40px 0 12px;padding-top:12px;border-top:1px solid var(--line)}
+h3{color:var(--orange);font-size:1.02rem;margin:22px 0 8px}
+a{color:var(--teal)}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;color:var(--teal);background:#0b1222;padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.88rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+pre.verbatim{background:#0b1222;border:1px solid var(--line);border-radius:8px;padding:14px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Consolas,monospace;color:var(--text)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:#172033;color:var(--text)}
+.tag{display:inline-block;font-size:.75rem;padding:1px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.rea{color:var(--teal);border-color:var(--teal)}
+.out{color:var(--orange);border-color:var(--orange)}
+.ok{color:var(--green)}.bad{color:var(--red)}.part{color:var(--amber)}
+.note{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:#1a2235;margin:10px 0}
+figure{margin:16px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto}
+figure img{display:block;max-width:100%;height:auto}
+figcaption{color:var(--muted);font-size:.88rem;margin-top:8px}
+iframe{width:100%;height:760px;border:1px solid var(--line);border-radius:8px;background:#0f172a}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;color:var(--text);font-size:1.5rem}
+nav ol{columns:2;column-gap:28px;padding-left:20px;margin:6px 0}
+details summary{cursor:pointer;color:var(--teal)}
+@media (max-width:640px){nav ol{columns:1}}
+</style>
+</head>
+<body>
+<main>
+<h1>Untangle, rebuilt from REA evidence only: receipt</h1>
+<p class="meta">Personal data removed: the Windows user name is shown as <code>&lt;user&gt;</code> and the session ID as <code>&lt;session-id&gt;</code>. This also applies inside the prompt below; that is the only change to it.</p>
+<p class="meta">Date: 2026-10-10. Host: Windows 11, win32 x64, 125 % display scale. Agent: Claude Code, model Opus 5.5 (<code>claude-opus-5-5</code>). Tool under test: REA (<code>rea-agents</code>) 6.3.0 with Ghidra 12.1.4 (Windows x64 P0, read-only). Target: <code>untangle.exe</code> "Version 20260923.616da16" from Simon Tatham's Portable Puzzle Collection (MIT licence). Key: source release <code>puzzles-20260923.616da16</code>. Work folder: <code>C:\Users\<user>\Downloads\REA\rebuild-untangle</code> (git, local only, not pushed).</p>
+
+<div class="card">
+<p><strong>What this page is.</strong> A record of one run in which an agent rebuilt the puzzle game Untangle as a web page, using only facts that REA extracted from the shipped Windows binary. The agent froze its findings in a git commit, then downloaded the source code as the answer key, and a separate grader agent marked every claim against it.</p>
+<p><strong>Result in one line.</strong> 52 of 54 checkable claims correct (96.3 %), 2 partly correct, 0 wrong. Fidelity <strong>L3</strong>: the same seed gives the same puzzle as the original, confirmed by the grader's line-by-line check and by running both side by side.</p>
+</div>
+
+<div class="stats">
+<div class="stat"><b>96.3 %</b>claims correct (52 / 54 checkable)</div>
+<div class="stat"><b>88 %</b>my prediction before the key</div>
+<div class="stat"><b>L3</b>fidelity reached (seed → same puzzle)</div>
+<div class="stat"><b>{{NREA}} / {{NALL}}</b>tool calls that were REA</div>
+</div>
+
+<nav class="card"><strong>Contents</strong>
+<ol>
+<li><a href="#prompt">The prompt (verbatim)</a></li>
+<li><a href="#timeline">Timeline from git log</a></li>
+<li><a href="#hashes">Hashes</a></li>
+<li><a href="#gif">Side-by-side GIF</a></li>
+<li><a href="#play">Playable rebuild</a></li>
+<li><a href="#claims">Claims, evidence and verdicts</a></li>
+<li><a href="#score">Score, fidelity and gaps</a></li>
+<li><a href="#ledger">Tool ledger (from the transcript)</a></li>
+<li><a href="#rules">Rule audit</a></li>
+<li><a href="#limits">REA limits and unknown unknowns</a></li>
+</ol></nav>
+
+<h2 id="prompt">1. The prompt (verbatim)</h2>
+<pre class="verbatim">{{PROMPT}}</pre>
+
+<h2 id="timeline">2. Timeline from git log</h2>
+<p>Commit times are the timeline proof. The findings commit (<strong>phase 3</strong>, 22:49:55) comes before the key download (23:01:43, committed 23:02:09 as "phase 5: key downloaded"). Phase 6 ran while the phase 5 grader agent ran in the background; both were committed at 23:21:11.</p>
+<div class="scroll"><table><tr><th>Hash</th><th>Commit time (−0700)</th><th>Subject</th></tr>
+{{COMMITS}}
+</table></div>
+
+<h2 id="hashes">3. Hashes</h2>
+<div class="scroll"><table>
+<tr><th>File</th><th>SHA-256</th></tr>
+<tr><td><code>target/untangle.exe</code> (167,496 bytes)</td><td><code>{{BINSHA}}</code></td></tr>
+<tr><td><code>findings-before-key.md</code> (frozen at phase 3)</td><td><code>{{FBKSHA}}</code></td></tr>
+<tr><td><code>key/puzzles.tar.gz</code> (2,497,958 bytes; gitignored)</td><td><code>CC419C8060B4E22BE398AA03E30651FBCE146EEE510645C303FB6F5F1B77B78E</code></td></tr>
+<tr><td><code>evidence/bundle-phase2.json</code> (REA export, 72,709,423 bytes, 49 records; gitignored)</td><td><code>{{BUNDLESHA}}</code></td></tr>
+</table></div>
+
+<h2 id="gif">4. Side-by-side GIF</h2>
+<figure><img alt="Original untangle.exe on the left and the REA rebuild on the right, both solving seed 10#123456789012345 with the same ten drags" src="data:image/gif;base64,{{GIF}}">
+<figcaption>Left: the original <code>untangle.exe 10#123456789012345</code>, captured with PowerShell user32 + System.Drawing. Right: the rebuild with the same game ID, captured with REA <code>capture_web_screenshot</code>. The same 10 mouse drags (PowerShell <code>SetCursorPos</code>/<code>mouse_event</code>) were sent to both. Frame 0 shows the same graph on both sides; the last frame shows both solved. Assembled with ImageMagick 7.1.1.</figcaption></figure>
+
+<h2 id="play">5. Playable rebuild</h2>
+<p class="meta">The page below is <code>rebuild/index.html</code>, embedded unchanged. It starts a random seed; type a game ID such as <code>10#123456789012345</code> and press "Load". Do not choose "Custom…" inside this frame if your browser blocks prompts in frames.</p>
+<iframe title="Untangle rebuild" sandbox="allow-scripts allow-modals" srcdoc="{{REBUILD}}"></iframe>
+
+<h2 id="claims">6. Claims, evidence and verdicts</h2>
+<p>Claim text and evidence IDs come from <code>findings-before-key.md</code> (frozen). Verdicts and source lines come from the grader, unedited. Full evidence IDs are in <code>evidence/evidence-index.md</code>.</p>
+<div class="scroll"><table><tr><th>#</th><th>Claim</th><th>REA evidence</th><th>Conf.</th><th>Verdict</th><th>Source</th></tr>
+{{CLAIMS}}
+</table></div>
+<h3>Addendum facts (after the freeze, before the key)</h3>
+<div class="scroll"><table><tr><th>#</th><th>Time</th><th>Fact</th><th>Evidence</th><th>Verdict</th><th>Source</th></tr>
+{{ADDS}}
+</table></div>
+
+<h2 id="score">7. Score, fidelity and gaps</h2>
+<div class="card">
+<p><strong>Score:</strong> 52 correct, 2 partly correct (C50 says "floor" where C truncates; C52 says the first arrow press selects point 0, which A1 had already corrected), 0 wrong, 3 not checkable from source (C1, C3, C4 are facts about the binary file). 52 / 54 = 96.3 %. Addendum: 7 / 7.</p>
+<p><strong>Fidelity:</strong> L1 (rules, look, playable to a win: REA browser scenario won a game by keyboard), L2 (game-ID format; the same ID gives the same puzzle), and <strong>L3</strong>: the grader found no algorithm difference between the rebuild's generator and <code>untangle.c</code>/<code>random.c</code>/<code>tree234.c</code>; the phase 6 run showed the same start graph for seed <code>123456789012345</code>, and the rebuild's solution solved the original.</p>
+<p><strong>Rebuild differences found by the grader:</strong> keyboard (Space should cycle, not pick up; Shift+Tab does not reverse on Windows), no midend key shortcuts (u, r, n, q, Ctrl+Z…), no "Keyboard shortcuts without Ctrl" preference, Restart animates in the rebuild but not in the original, no undo of New Game, grey 0.5 rounds to 128 instead of 127, text not bold, anti-aliased lines, a trailing comma in a description adds a NaN edge, and the ID box trims spaces.</p>
+</div>
+<div class="scroll"><table><tr><th>Gap</th><th>What REA did not answer</th><th>Effect on rebuild</th><th>Does the source answer it? (grader)</th></tr>
+{{GAPS}}
+</table></div>
+
+<h2 id="ledger">8. Tool ledger (built by a script from the transcript)</h2>
+<p><code>receipt/build-ledger.js</code> read every <code>tool_use</code> entry in the session transcript <code>~/.claude/projects/C--Users-<user>-Downloads-REA/&lt;session-id&gt;.jsonl</code> and put each call in the phase of the first commit at or after it. Calls made after the ledger run (the last few in phase 7) are not counted. The grader subagent's own 45 Read/Grep/Glob calls are in its separate transcript and are not counted here.</p>
+<div class="scroll"><table>{{LEDGER}}</table></div>
+<details><summary>Every non-REA call with its stated reason ({{NALL}} − {{NREA}} calls)</summary>
+<div class="scroll"><table><tr><th>Time (UTC)</th><th>Phase</th><th>Tool</th><th>Reason (the call's description field)</th></tr>
+{{NONREA}}
+</table></div></details>
+<details><summary>tool-log.md (the hand-kept log the prompt asked for)</summary><pre class="verbatim">{{TOOLLOG}}</pre></details>
+
+<h2 id="rules">9. Rule audit</h2>
+<div class="scroll"><table><tr><th>Rule</th><th>Status</th><th>Detail</th></tr>
+<tr><td>1. Target facts only from REA, with evidence IDs</td><td class="ok">Kept</td><td>Every claim row cites REA evidence. Where Ghidra had not defined a function, I decoded REA <code>read_bytes</code> output by hand and marked it "analyst decode".</td></tr>
+<tr><td>2. No web search, fetch or browser on the internet</td><td class="ok">Kept</td><td>Only the phase 1 binary download and the phase 5 key download went to the internet (PowerShell <code>Invoke-WebRequest</code>). The browser only opened <code>127.0.0.1</code>.</td></tr>
+<tr><td>3. No source, web version, help or write-up before the key</td><td class="ok">Kept</td><td>The index page was only matched by regex. The key folder was created after the phase 4 commit.</td></tr>
+<tr><td>4. No remembered facts</td><td class="part">Risk, not provable</td><td>Claude Code showed this notice during the run: "The model likely saw Untangle's public source code during training … score can still include remembered knowledge." Every claim cites REA evidence, and no claim was marked <code>prior-knowledge</code>, but I cannot prove that memory did not steer which REA calls I made or how I read pseudocode. Two places where general (not puzzle-specific) knowledge was used: recognising SHA-1 from its constants, and the 240-grey background placeholder (marked <code>gap</code>).</td></tr>
+<tr><td>5. No subagents or advisor in phases 0–4</td><td class="ok">Kept</td><td>The first advisor call and the only subagent (the grader) came after the phase 4 commit.</td></tr>
+<tr><td>6. Only allowed non-REA tools, each logged</td><td class="part">Kept, with three judgement calls</td><td>(a) A PowerShell variable clash in phase 1 printed about 1 KB of the exe's raw bytes in an error message; nothing from it was used (logged). (b) Phase 4 needed a Chrome with a CDP port for the REA browser tools; that launch is not on the rule 6 list, so I logged it. (c) REA has no drag action, so in phase 6 the same PowerShell mouse input as on the original was also sent to the browser window; the prompt names PowerShell input for the PUZZLE window and PowerShell capture for the browser. Frames on the rebuild side came from REA as required.</td></tr>
+<tr><td>7. Gaps recorded, not filled</td><td class="ok">Kept</td><td>G1–G11 recorded. Placeholders in the code are marked <code>gap</code>.</td></tr>
+<tr><td>Phase 6 facts must not change findings or rebuild</td><td class="ok">Kept</td><td>No file in <code>rebuild/</code> or the findings changed after the key; phase 6 observations are in <code>grading.md</code> as D1–D6.</td></tr>
+<tr><td>Environment incident</td><td class="part">Note</td><td>The antivirus blocked the Bash <code>curl</code> command as "Trojan.Downloader.CLI" (a screenshot the user sent), so downloads used <code>Invoke-WebRequest</code>.</td></tr>
+</table></div>
+
+<h2 id="limits">10. REA limits and unknown unknowns found in this run</h2>
+<ol>
+<li><strong>No native UI capture on Windows</strong> (known before the run): REA 6.3.0 cannot screenshot or click a Windows window, so the original was never observed through REA.</li>
+<li><strong><code>inspect_signature</code> needs macOS.</strong> On Windows it returns <code>capability_unavailable</code> ("Native macOS utilities require macOS"). The Authenticode blob was found only by parsing the PE header from <code>read_bytes</code> by hand.</li>
+<li><strong>Ghidra left 7 of the game's functions undefined</strong> (small leaf functions reached only through the function-pointer table). <code>batch_decompile</code> failed on them ("No procedure exists at the requested address"); <code>read_bytes</code> plus hand decoding of x86-64 was the workaround. A reader of REA output alone would miss these functions.</li>
+<li><strong>Results are larger than the client's tool-result limit.</strong> Most decompile, string and screenshot results (55–140 K characters) were saved to files and read with node; the 10 MB MCP budget was never the limit.</li>
+<li><strong>The exported evidence bundle carries records from earlier sessions</strong> (8 of 49 records were from the session-4 REA-on-REA run; <code>evidence/questions.md</code> says 7, which is a miscount) and is 72 MB for 49 records, mostly inline payloads.</li>
+<li><strong><code>capture_browser_scenario</code> has no drag action</strong>, so REA could test keyboard play to a win but not mouse dragging.</li>
+<li><strong>Where REA-guided analysis missed facts:</strong> all 22 "missed facts" from the grader are in the midend or the Windows front end (key shortcuts, Space vs Enter, Shift+Tab, Restart behaviour, font weight, GDI pixel rules). The game file itself (<code>untangle.c</code>) was covered almost completely. The cause is scope: I followed the game's function table, not the shared front-end code.</li>
+<li><strong>Prior-knowledge risk</strong> (see rule 4): for a widely published open-source program, an "REA-only" score is an upper bound on what REA alone would give a model that has never seen the source.</li>
+</ol>
+</main>
+</body>
+</html>

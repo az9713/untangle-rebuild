@@ -5,7 +5,8 @@ const [, , jsonl, root, out] = process.argv;
 // Phase boundaries = commit times from git log (the timeline proof).
 const commits = execSync(`git -C "${root}" log --reverse --format=%cI%x09%s`).toString().trim().split("\n")
   .map(l => { const [t, s] = l.split("\t"); return { t: Date.parse(t), s }; });
-const phaseOf = ts => { for (const c of commits) if (ts <= c.t) return c.s.replace(/:.*/, "").replace(/ \(.*/, ""); return "phase 7"; };
+// A call belongs to the first commit at or after it. Phase 6 ran while the phase 5 grader ran, so those calls land in "phase 5: grading".
+const phaseOf = ts => { for (const c of commits) if (ts <= c.t) return c.s.replace(/ \(.*/, ""); return "phase 7: receipt"; };
 const rows = [];
 for (const line of fs.readFileSync(jsonl, "utf8").split("\n")) {
   if (!line.trim()) continue;
