@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Untangle rebuild</title>
+<!--
+  REA-only rebuild of Untangle (untangle.exe "Version 20260923.616da16").
+  Every target fact cites a claim in ../findings-before-key.md (Cnn) and a REA evidence ID (ev_xxxxxxxx).
+  "gap" marks a placeholder for a fact REA did not give. "design" marks a choice of this web page,
+  not a fact about the original.
+-->
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --line:#334155; --accent:#fb923c; --accent2:#2dd4bf; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  h1 { font-size:18px; margin:0 0 8px; }
+  .bar { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; align-items:center; }
+  button, select, input { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:4px; padding:4px 8px; font:inherit; }
+  button:hover { border-color:var(--accent2); }
+  #board { display:block; margin:8px 0; touch-action:none; outline:none; max-width:100%; }
+  #msg { color:var(--accent); min-height:1.4em; }
+  #gameid { width:100%; box-sizing:border-box; font-family:ui-monospace, monospace; font-size:12px; }
+  .muted { color:var(--muted); font-size:12px; }
+  label { white-space:nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Untangle (REA rebuild)</h1>
+  <div class="bar">
+    <button id="bNew">New</button>
+    <button id="bRestart">Restart</button>
+    <button id="bUndo">Undo</button>
+    <button id="bRedo">Redo</button>
+    <button id="bSolve">Solve</button>
+    <select id="sType" aria-label="Type"></select>
+  </div>
+  <div class="bar">
+    <label><input type="checkbox" id="pSnap"> Snap points to a grid</label>
+    <label><input type="checkbox" id="pCross"> Show edges that cross another edge</label>
+    <label>Display style for vertices <select id="pStyle"><option value="0">Circles</option><option value="1">Numbers</option></select></label>
+  </div>
+  <canvas id="board" tabindex="0" aria-label="Untangle board"></canvas>
+  <div id="msg"></div>
+  <div class="bar"><input id="gameid" spellcheck="false" aria-label="Game ID"><button id="bLoad">Load game ID / seed</button></div>
+  <p class="muted">Drag the points until no two lines cross. Keyboard: arrows move the cursor, Enter or Space picks up and drops, Tab cycles (key mapping is a gap, see G4).</p>
+</main>
+<script>
+"use strict";
+// ---------------- SHA-1 (C10, C11 ev_da809602: the RNG hashes with standard SHA-1) ----------------
+function sha1(bytes) {
+  const ml = bytes.length, words = new Uint32Array((((ml + 8) >> 6) + 1) * 16);
+  for (let i = 0; i < ml; i++) words[i >> 2] |= bytes[i] << (24 - (i & 3) * 8);
+  words[ml >> 2] |= 0x80 << (24 - (ml & 3) * 8);                       // C11 0x80 padding
+  words[words.length - 1] = ml * 8;                                     // C11 big-endian bit length
+  let h0 = 0x67452301, h1 = 0xefcdab89, h2 = 0x98badcfe, h3 = 0x10325476, h4 = 0xc3d2e1f0; // C11
+  const w = new Uint32Array(80);
+  for (let off = 0; off < words.length; off += 16) {
+    for (let t = 0; t < 16; t++) w[t] = words[off + t];
+    for (let t = 16; t < 80; t++) { const x = w[t-3] ^ w[t-8] ^ w[t-14] ^ w[t-16]; w[t] = (x << 1) | (x >>> 31); }
+    let a = h0, b = h1, c = h2, d = h3, e = h4;
+    for (let t = 0; t < 80; t++) {
+      let f, k;
+      if (t < 20) { f = (b & c) | (~b & d); k = 0x5a827999; }           // C11 round constants
+      else if (t < 40) { f = b ^ c ^ d; k = 0x6ed9eba1; }
+      else if (t < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8f1bbcdc; }
+      else { f = b ^ c ^ d; k = 0xca62c1d6; }
+      const tmp = (((a << 5) | (a >>> 27)) + f + e + k + w[t]) >>> 0;
+      e = d; d = c; c = ((b << 30) | (b >>> 2)) >>> 0; b = a; a = tmp;
+    }
+    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0; h4 = (h4 + e) >>> 0;
+  }
+  const out = new Uint8Array(20);
+  [h0, h1, h2, h3, h4].forEach((h, i) => { out[i*4] = h >>> 24; out[i*4+1] = (h >>> 16) & 255; out[i*4+2] = (h >>> 8) & 255; out[i*4+3] = h & 255; });
+  return out;
+}
+
+// ---------------- RNG (C10, C12, C13, C14) ----------------
+function randomNew(seedText) {                       // C10 ev_da809602 (0x140015140)
+  const seed = new TextEncoder().encode(seedText);
+  const s = new Uint8Array(60);
+  s.set(sha1(seed), 0);                              // bytes 0-19 = SHA1(seed)
+  s.set(sha1(s.subarray(0, 20)), 20);                // bytes 20-39 = SHA1(bytes 0-19)
+  s.set(sha1(s.subarray(0, 40)), 40);                // bytes 40-59 = SHA1(bytes 0-39)
+  return { s, pos: 0 };
+}
+function randomBits(rs, bits) {                      // C12 ev_2287f35a (0x140015270)
+  let ret = 0;
+  for (let n = 0; n < bits; n += 8) {
+    if (rs.pos >= 20) {
+      for (let i = 0; i < 20; i++) { if (rs.s[i] !== 0xff) { rs.s[i]++; break; } rs.s[i] = 0; } // little-endian counter
+      rs.s.set(sha1(rs.s.subarray(0, 40)), 40);
+      rs.pos = 0;
+    }
+    ret = (ret * 256 + rs.s[40 + rs.pos++]) % 4294967296;   // 32-bit shift, most significant byte first
+  }
+  return ret % Math.pow(2, bits);
+}
+function randomUpto(rs, limit) {                     // C13 ev_0c928f90 (0x140015630)
+  let b = 0; while (Math.floor(limit / Math.pow(2, b)) !== 0) b++;
+  if (b > 28) throw new Error("bits < 32");
+  const divisor = Math.floor(((8 * Math.pow(2, b)) >>> 0) / limit);
+  let v; do { v = randomBits(rs, b + 3); } while (divisor * limit <= v);
+  return Math.floor(v / divisor);
+}
+function shuffle(arr, n, rs) {                       // C14 ev_571db767 (0x140005430)
+  for (let i = n; i > 1; i--) { const j = randomUpto(rs, i); const t = arr[i-1]; arr[i-1] = arr[j]; arr[j] = t; }
+}
+
+// ---------------- geometry ----------------
+const isqrt = x => Math.floor(Math.sqrt(x));         // C24 ev_571db767 (0x140003f30 = floor(sqrt))
+const big = (p, q) => BigInt(p | 0) * BigInt(q | 0);
+const dot64 = (p, q, r, s) => BigInt.asIntN(64, big(p, q) + big(r, s)); // C32 ev_0c928f90 (0x1400043d0: p*q + r*s, 64-bit)
+const im = Math.imul;
+// C32 ev_571db767 (0x140004170): closed-segment intersection on rational points {x,y,d}.
+function cross(a, b, c, d) {
+  const b1 = (im(a.d, b.x) - im(a.x, b.d)) | 0, bym = (im(a.y, b.d) - im(b.y, a.d)) | 0;
+  const c1 = (im(a.d, c.x) - im(c.d, a.x)) | 0, c2 = (im(a.d, c.y) - im(a.y, c.d)) | 0;
+  const d1 = (im(a.d, d.x) - im(d.d, a.x)) | 0, d2 = (im(a.d, d.y) - im(d.d, a.y)) | 0;
+  const v1 = dot64(c1, bym, c2, b1), v2 = dot64(d1, bym, d2, b1);
+  if (v1 > 0n && v2 > 0n) return false;
+  if (v1 < 0n && v2 < 0n) return false;
+  if (v1 === 0n && v2 === 0n) {                      // collinear: compare projections on a-b
+    const by = -bym | 0;
+    const p1 = dot64(c1, b1, c2, by), p2 = dot64(d1, b1, d2, by), len = dot64(b1, b1, by, by);
+    if (p1 < 0n && p2 < 0n) return false;
+    if (p1 > len && p2 > len) return false;
+  }
+  const dyc = (im(c.y, d.d) - im(d.y, c.d)) | 0, dxc = (im(d.x, c.d) - im(d.d, c.x)) | 0;
+  const v3 = dot64((im(c.d, a.x) - im(a.d, c.x)) | 0, dyc, (im(a.y, c.d) - im(c.y, a.d)) | 0, dxc);
+  const v4 = dot64((im(b.x, c.d) - im(b.d, c.x)) | 0, dyc, (im(b.y, c.d) - im(b.d, c.y)) | 0, dxc);
+  if (v3 < 0n) return !(v4 < 0n);
+  if (v3 !== 0n && v4 > 0n) return false;
+  return true;
+}
+const cmp2 = (p, q) => p[0] - q[0] || p[1] - q[1];  // ev_30fa46c4 (0x140004140: lexicographic pair compare)
+
+// C30 ev_f7ad8758 (0x140002450): start layout on a circle, denominator 64.
+function circlePoints(n, w) {
+  const r = Math.trunc((w * 192) / 7), c = w * 32, pts = [];
+  for (let i = 0; i < n; i++) {
+    const ang = (2 * i * Math.PI) / n;
+    pts.push({ x: Math.trunc(Math.sin(ang) * r + c + 0.5), y: Math.trunc(Math.cos(ang) * -r + c + 0.5), d: 64 });
+  }
+  return pts;
+}
+
+// ---------------- generator (C24-C29, ev_f7ad8758 0x1400012c0) ----------------
+function newDesc(n, rs) {
+  const w = isqrt(n * 3);                            // C24
+  const grid = []; for (let i = 0; i < w * w; i++) grid.push(i);
+  shuffle(grid, w * w, rs);                          // C25
+  const pts = []; for (let i = 0; i < n; i++) pts.push({ x: grid[i] % w, y: Math.floor(grid[i] / w), d: 1 });
+  // gap G8: the original keeps vertices/edges in tree234; a sorted array gives the same order.
+  const verts = []; for (let i = 0; i < n; i++) verts.push([0, i]);   // (degree, index), C26
+  const edges = [];                                  // sorted (a,b), a<b
+  const hasEdge = (a, b) => edges.some(e => e[0] === a && e[1] === b);
+  const dist2 = (p, q) => (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y);
+  for (;;) {                                         // C26: restart from position 0 after every new edge
+    let added = false;
+    for (let i = 0; i < n && !added; i++) {
+      const [deg, v] = verts[i];
+      if (deg > 3) break;                            // C27 max degree 4
+      const cands = [];
+      for (let j = i + 1; j < n; j++) {
+        const [dj, u] = verts[j];
+        if (dj < 4 && !hasEdge(Math.min(u, v), Math.max(u, v))) cands.push([dist2(pts[v], pts[u]), u]);
+      }
+      cands.sort(cmp2);                              // by (squared distance, index)
+      for (const [, u] of cands) {
+        let ok = true;
+        for (let k = 0; k < n && ok; k++) if (k !== u && k !== v && cross(pts[u], pts[v], pts[k], pts[k])) ok = false; // no point on the segment
+        for (const [a, b] of edges) {
+          if (!ok) break;
+          if (a !== u && a !== v && b !== u && b !== v && cross(pts[u], pts[v], pts[a], pts[b])) ok = false;
+        }
+        if (!ok) continue;
+        edges.push([Math.min(u, v), Math.max(u, v)]); edges.sort(cmp2);
+        for (const x of verts) if (x[1] === u || x[1] === v) x[0]++;
+        verts.sort(cmp2);
+        added = true; break;
+      }
+    }
+    if (!added) break;
+  }
+  const circ = circlePoints(n, w), perm = []; for (let i = 0; i < n; i++) perm.push(i);
+  for (;;) {                                         // C28: reshuffle (cumulative) until the circle layout is tangled
+    shuffle(perm, n, rs);
+    let tangled = false;
+    for (let i = 0; i < edges.length && !tangled; i++) for (let j = i + 1; j < edges.length && !tangled; j++) {
+      const [a1, b1] = edges[i], [a2, b2] = edges[j];
+      if (a2 === a1 || a2 === b1 || b2 === a1 || b2 === b1) continue;
+      tangled = cross(circ[perm[a2]], circ[perm[b2]], circ[perm[a1]], circ[perm[b1]]);
+    }
+    if (tangled) break;
+  }
+  const out = edges.map(([a, b]) => [Math.min(perm[a], perm[b]), Math.max(perm[a], perm[b])]).sort(cmp2);
+  const desc = out.map(e => e[0] + "-" + e[1]).join(",");            // C22 "%s%d-%d" with "" then ","
+  const sol = []; for (let i = 0; i < n; i++) sol[perm[i]] = pts[i];
+  const aux = "S" + sol.map((p, i) => ";P" + i + ":" + (2 * p.x + 1) + "," + (2 * p.y + 1) + "/2").join(""); // C29
+  return { desc, aux };
+}
+
+// ---------------- params, IDs, validation (C16-C23) ----------------
+function validateParams(n) {                         // C20 ev_4da3c117
+  if (!(n >= 4)) return "Number of points must be at least four";
+  if (n >= 0x2aaaaaab) return "Number of points must not be unreasonably large";
+  return null;
+}
+const atoi = s => parseInt((/^\s*[+-]?\d+/.exec(s) || ["0"])[0], 10);
+const isDigit = c => c >= "0" && c <= "9";
+function validateDesc(n, desc) {                     // C23 ev_f7ad8758 (0x140002340)
+  const range = "Number out of range in game description";
+  let i = 0;
+  while (i < desc.length) {
+    const a = atoi(desc.slice(i)); if (a < 0 || a >= n) return range;
+    let j = i; while (j < desc.length && isDigit(desc[j])) j++;
+    if (desc[j] !== "-") return "Expected '-' after number in game description";
+    const k = j + 1, b = atoi(desc.slice(k)); if (b < 0 || b >= n) return range;
+    let m = k; while (m < desc.length && isDigit(desc[m])) m++;
+    if (m < desc.length && desc[m] !== ",") return "Expected ',' after number in game description";
+    if (a === b) return "Node linked to itself in game description";
+    i = m < desc.length ? m + 1 : m;
+  }
+  return null;
+}
+function parseEdges(desc) {                          // C22, duplicates ignored (C23)
+  const edges = [];
+  if (desc) for (const part of desc.split(",")) {
+    const [a, b] = part.split("-").map(s => parseInt(s, 10));
+    const e = [Math.min(a, b), Math.max(a, b)];
+    if (!edges.some(x => x[0] === e[0] && x[1] === e[1])) edges.push(e);
+  }
+  return edges.sort(cmp2);
+}
+
+// ---------------- state ----------------
+function newState(n, desc) {                         // C30, C31 ev_f7ad8758 (0x140002450)
+  const w = isqrt(n * 3);
+  const st = { n, w, h: w, pts: circlePoints(n, w), edges: parseEdges(desc), crosses: [], completed: false, cheated: false, justSolved: false };
+  markCrossings(st);
+  return st;
+}
+const dupState = st => ({ ...st, pts: st.pts.map(p => ({ ...p })), crosses: st.crosses.slice(), justSolved: false });
+function markCrossings(st) {                         // C33, C34 ev_571db767 (0x1400044f0)
+  st.crosses = st.edges.map(() => false);
+  let ok = true;
+  for (let i = 0; i < st.edges.length; i++) for (let j = i + 1; j < st.edges.length; j++) {
+    const [a, b] = st.edges[i], [c, d] = st.edges[j];
+    if (c === a || c === b || d === a || d === b) continue;
+    if (cross(st.pts[c], st.pts[d], st.pts[a], st.pts[b])) { st.crosses[i] = st.crosses[j] = true; ok = false; }
+  }
+  if (ok) st.completed = true;                       // C34 sticky flag
+}
+function executeMove(st, move) {                     // C35 ev_f7ad8758 (0x140003600)
+  const ns = dupState(st);
+  let s = move;
+  for (;;) {
+    if (s[0] === "S") { ns.cheated = true; ns.justSolved = true; s = s.slice(s[1] === ";" ? 2 : 1); }
+    if (s === "") { markCrossings(ns); return ns; }
+    const m = /^P(\d+):(-?\d+),(-?\d+)\/(-?\d+)/.exec(s);
+    if (!m) return null;
+    const i = +m[1], d = +m[4];
+    if (i < 0 || i >= ns.n || d < 1) return null;
+    ns.pts[i] = { x: +m[2], y: +m[3], d };
+    s = s.slice(m[0].length); if (s[0] === ";") s = s.slice(1);
+  }
+}
+function solveMove(st, aux) {                        // C56 ev_f7ad8758 (0x140002920)
+  if (!aux) return { err: "Solution not known for this puzzle" };
+  const f = Math.fround, sol = [];
+  const re = /;P(\d+):(-?\d+),(-?\d+)\/(-?\d+)/g; let m;
+  while ((m = re.exec(aux))) sol.push({ x: +m[2], y: +m[3], d: +m[4] });
+  const cw = f(st.w * 0.5), ch = f(st.h * 0.5);
+  const mat = u => { const M = [0, 0, 0, 0]; M[u & 1] = (u & 2) ? 1 : -1; M[(u & 1) ^ 3] = (u & 4) ? 1 : -1; return M; };
+  let best = -1, bestD = 0;
+  for (let u = 0; u < 8; u++) {
+    const M = mat(u); let dist = 0;
+    sol.forEach((p, i) => {
+      const xs = f(f(p.x / p.d) - cw), ys = f(f(p.y / p.d) - ch), q = st.pts[i];
+      const dx = f(f(f(M[0] * xs + f(ys * M[1])) + cw) - f(q.x / q.d));
+      const dy = f(f(f(xs * M[2] + f(ys * M[3])) + ch) - f(q.y / q.d));
+      dist = f(dist + f(f(dx * dx) + f(dy * dy)));
+    });
+    if (dist < bestD || best < 0) { best = u; bestD = dist; }
+  }
+  const M = mat(best);
+  return { move: "S" + sol.map((p, i) => {
+    const xs = f(f(p.x / p.d) - cw), ys = f(f(p.y / p.d) - ch);
+    const tx = f(f(M[0] * xs + f(ys * M[1])) + cw), ty = f(f(xs * M[2] + f(ys * M[3])) + ch);
+    return ";P" + i + ":" + Math.trunc(f(f(tx + tx) + 0.5)) + "," + Math.trunc(f(f(ty + ty) + 0.5)) + "/2";
+  }).join("") };
+}
+
+// ---------------- drawing (C37-C48) ----------------
+const TS = 64;                                        // C38 ev_f3e4cc63 (preferred tile size 64); gap G7
+// C39 ev_f7ad8758 (0x140003850). Colour 1 = Windows COLOR_MENU at run time: gap G2, placeholder 240/255 grey.
+const BG = [0.941, 0.941, 0.941];                     // gap G2
+const COL = [null, BG, [0,0,0], [1,0,0], [0,0,0], [0,0,1], [1,1,1], [0.5,0.5,0.5], [1,0,0], [0.5,0.5,0.5], [1,1,1]];
+const k = 0.28867513, nb = Math.hypot(...BG);         // C40 ev_0c928f90: lowlight (not used by redraw)
+COL[0] = nb >= k ? BG.map(c => c * (1 - k / nb)) : [0, 0, 0];
+const css = c => "rgb(" + c.map(v => Math.round(v * 255)).join(",") + ")";
+const PASS = [5, 8, 7, 6];                            // C41 ev_f3e4cc63 (0x1400171b0), ev_ca98285d
+const ANIM_NORMAL = 0.13, ANIM_SOLVE = 0.5, FLASH = 0.3; // C47, C48 ev_f8647744
+
+const cv = document.getElementById("board"), g = cv.getContext("2d");
+const ui = { drag: -1, cursor: -1, x: 0, y: 0, d: TS, justDragged: false, justMoved: false, snap: false, showCross: false, numbers: false }; // ev_17c98852 (0x140002f80, defaults off/Circles C55)
+let hist = [], pos = 0, aux = null, seed = null, params = 10;  // C17 default n = 10
+let anim = null, flash = null;
+
+function draw() {
+  const st = hist[pos], now = performance.now() / 1000;
+  let from = null, t = 0;
+  if (anim) { t = now - anim.start; if (t >= anim.len) anim = null; else from = anim.from; }
+  let bgc = 1;
+  if (flash) { const ft = now - flash.start; if (ft >= FLASH) flash = null; else bgc = 9 + (Math.trunc((ft * 4) / FLASH) & 1); } // C48
+  const size = st.w * TS;                             // C37
+  if (cv.width !== size) { cv.width = size; cv.height = size; }
+  const sx = [], sy = [];
+  st.pts.forEach((p, i) => {                          // C45, C47 linear interpolation
+    let x = p.x, y = p.y, d = p.d;
+    if (i === ui.drag) { x = ui.x; y = ui.y; d = ui.d; }
+    if (from) { const o = from.pts[i], a = t / anim.len; x = Math.trunc(a * (x * o.d - o.x * d) + o.x * d); y = Math.trunc(a * (y * o.d - o.y * d) + o.y * d); d = o.d * d; }
+    sx[i] = Math.trunc((x * TS) / d); sy[i] = Math.trunc((y * TS) / d);
+  });
+  g.fillStyle = css(COL[bgc]); g.fillRect(0, 0, size, size);          // C41 full-canvas rect
+  const flags = (from || st).crosses;                 // C42: flags from the old state during animation
+  g.lineWidth = 1;                                    // C41 1-px pen, ev_979e13f3
+  st.edges.forEach(([a, b], i) => {
+    g.strokeStyle = css(COL[ui.showCross && flags[i] ? 3 : 2]);     // C42
+    g.beginPath(); g.moveTo(sx[a] + 0.5, sy[a] + 0.5); g.lineTo(sx[b] + 0.5, sy[b] + 0.5); g.stroke();
+  });
+  const colourOf = i => {                             // C46
+    if (i === ui.drag) return 6;
+    if (i === ui.cursor) return 7;
+    if (ui.drag >= 0 && st.edges.some(e => e[0] === Math.min(i, ui.drag) && e[1] === Math.max(i, ui.drag))) return 8;
+    return 5;
+  };
+  for (const c of PASS) for (let i = 0; i < st.n; i++) {
+    if (colourOf(i) !== c) continue;
+    g.beginPath();
+    if (!ui.numbers) {                                // C43 radius 6, outline colour 4
+      g.arc(sx[i], sy[i], 6, 0, 2 * Math.PI); g.fillStyle = css(COL[c]); g.fill(); g.strokeStyle = css(COL[4]); g.stroke();
+    } else {                                          // C44 radius 12 in background colour, then the number
+      g.arc(sx[i], sy[i], 12, 0, 2 * Math.PI); g.fillStyle = g.strokeStyle = css(COL[bgc]); g.fill(); g.stroke();
+      g.fillStyle = css(COL[c]); g.font = "18px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; // gap G6
+      g.fillText(String(i), sx[i], sy[i]);
+    }
+  }
+  if (anim || flash) requestAnimationFrame(draw);
+  document.getElementById("msg").textContent = st.completed ? "Solved." : "";   // design: no status bar in the original (C9)
+}
+
+// ---------------- moves and history (design: a plain undo list) ----------------
+function changedState() { ui.drag = -1; ui.justMoved = ui.justDragged; ui.justDragged = false; } // ev_17c98852 (0x140002fb0)
+function animLength(from, to) { if (ui.justMoved) return 0; return to.justSolved ? ANIM_SOLVE : ANIM_NORMAL; } // C47 ev_eaa1643a
+function flashLength(o, nw) { return (!o.completed && nw.completed && !o.cheated && !nw.cheated) ? FLASH : 0; } // C48 ev_eaa1643a
+function goTo(newPos) {
+  const dir = newPos > pos ? 1 : -1;
+  const from = hist[pos]; pos = newPos; const to = hist[pos];
+  changedState();
+  const len = animLength(from, dir > 0 ? to : from);  // ev_eaa1643a: dir < 0 reads the first (old) state's flag
+  anim = len > 0 ? { from, len, start: performance.now() / 1000 } : null;
+  const fl = dir > 0 ? flashLength(from, to) : 0;     // design: flash only on forward moves
+  flash = fl > 0 ? { start: performance.now() / 1000 } : null;
+  draw();
+}
+function applyMove(move) {
+  const ns = executeMove(hist[pos], move); if (!ns) return false;
+  hist = hist.slice(0, pos + 1); hist.push(ns); goTo(pos + 1, true); return true;
+}
+
+// ---------------- input (C49-C54, ev_f7ad8758 0x140002fd0) ----------------
+function snapTo(mx, my) {                             // C50
+  const st = hist[pos], n = st.n;
+  ui.x = (Math.trunc((mx * (n - 1)) / (TS * st.w)) * 2 + 1) * st.w;
+  ui.y = (Math.trunc((my * (n - 1)) / (TS * st.h)) * 2 + 1) * st.h;
+  ui.d = 2 * n - 2;
+}
+function setDragPos(mx, my) { if (ui.snap) snapTo(mx, my); else { ui.x = mx; ui.y = my; ui.d = TS; } }
+function inside() { const st = hist[pos]; return ui.x >= 0 && ui.x < st.w * ui.d && ui.y >= 0 && ui.y < st.h * ui.d; } // C51
+function dropMove(i) { ui.justDragged = true; return applyMove("P" + i + ":" + ui.x + "," + ui.y + "/" + ui.d); }
+
+function mouseXY(e) { const r = cv.getBoundingClientRect(); return [Math.trunc((e.clientX - r.left) * cv.width / r.width), Math.trunc((e.clientY - r.top) * cv.height / r.height)]; }
+cv.addEventListener("pointerdown", e => {             // C49
+  const [mx, my] = mouseXY(e), st = hist[pos];
+  let best = -1, bd = 0;
+  st.pts.forEach((p, i) => { const dx = Math.trunc((p.x * TS) / p.d) - mx, dy = Math.trunc((p.y * TS) / p.d) - my, dd = dx * dx + dy * dy; if (best < 0 || dd < bd) { best = i; bd = dd; } });
+  if (best < 0 || bd > 144) return;                   // 12 px
+  ui.drag = best; ui.cursor = -1; setDragPos(mx, my);
+  cv.setPointerCapture(e.pointerId); draw();
+});
+cv.addEventListener("pointermove", e => { if (ui.drag < 0) return; const [mx, my] = mouseXY(e); setDragPos(mx, my); draw(); }); // C50
+cv.addEventListener("pointerup", e => {               // C51
+  if (ui.drag < 0) return;
+  const i = ui.drag; ui.cursor = -1;
+  if (inside()) dropMove(i); else { ui.drag = -1; draw(); }
+});
+
+// gap G4: physical keys for codes 0x209-0x20d and modifier 0x2000 are inferred, not observed.
+const KEYS = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3 };
+cv.addEventListener("keydown", e => {
+  const st = hist[pos], n = st.n;
+  if (e.key in KEYS) {                                // C52, C53
+    e.preventDefault(); const dir = KEYS[e.key];
+    if (ui.drag >= 0) {                               // move the held point by ts/2
+      const half = Math.trunc(TS / 2), dx = dir === 2 ? -half : dir === 3 ? half : 0, dy = dir === 0 ? -half : dir === 1 ? half : 0;
+      setDragPos(Math.trunc((ui.x * TS) / ui.d) + dx, Math.trunc((ui.y * TS) / ui.d) + dy);
+    } else {
+      if (ui.cursor < 0) ui.cursor = 0;
+      const c = st.pts[ui.cursor]; let best = -1, bd = 0;
+      st.pts.forEach((p, i) => {
+        if (i === ui.cursor) return;
+        const dx = p.x * c.d - p.d * c.x, dy = p.y * c.d - p.d * c.y;
+        if (dx === 0 && dy === 0) return;
+        const ok = [dy <= -Math.abs(dx), dy >= Math.abs(dx), Math.abs(dy) <= -dx, Math.abs(dy) <= dx][dir];
+        if (!ok) return;
+        const dd = Math.floor((dx * dx + dy * dy) / ((p.d * c.d) * (p.d * c.d)));   // unsigned integer division, then float
+        if (dd < bd || best < 0) { best = i; bd = dd; }
+      });
+      if (best >= 0) ui.cursor = best;
+    }
+    draw();
+  } else if (e.key === "Enter" || e.key === " ") {    // C53 select (0x20d)
+    e.preventDefault();
+    if (ui.drag >= 0) { const i = ui.drag; ui.cursor = i; if (inside()) dropMove(i); else { ui.drag = -1; draw(); } }
+    else if (ui.cursor >= 0) { const p = st.pts[ui.cursor]; ui.drag = ui.cursor; ui.cursor = -1; ui.x = Math.trunc((p.x * TS) / p.d); ui.y = Math.trunc((p.y * TS) / p.d); ui.d = TS; draw(); }
+    else { ui.cursor = 0; draw(); }
+  } else if (e.key === "Tab") {                       // C54
+    e.preventDefault();
+    if (ui.drag >= 0) return;
+    ui.cursor = ui.cursor >= 0 ? (ui.cursor + (e.shiftKey ? -1 : 1) + n) % n : 0;
+    draw();
+  }
+});
+
+// ---------------- game setup (C15, C18, C21) ----------------
+function randomSeed() {                               // C15 form: 15 digits, first 1-9 (midend RNG itself: design, not replicated)
+  let s = String(1 + Math.floor(Math.random() * 9)); for (let i = 0; i < 14; i++) s += Math.floor(Math.random() * 10); return s;
+}
+function startGame(n, desc, auxStr, seedStr) {
+  params = n; aux = auxStr; seed = seedStr;
+  hist = [newState(n, desc)]; pos = 0; anim = flash = null;
+  ui.drag = ui.cursor = -1; ui.justDragged = ui.justMoved = false;
+  document.getElementById("gameid").value = seed ? n + "#" + seed : n + ":" + desc;
+  document.getElementById("sType").value = [6, 10, 15, 20, 25].includes(n) ? String(n) : "custom";
+  setMsg(""); draw();
+}
+function newFromSeed(n, seedStr) { const g2 = newDesc(n, randomNew(seedStr)); startGame(n, g2.desc, g2.aux, seedStr); } // C15 random_new(seed, strlen)
+function loadId(id) {                                 // C21 ev_cb816f3e: first of ':' or '#' splits
+  id = id.trim();
+  const ci = id.indexOf(":"), hi = id.indexOf("#");
+  const sep = ci < 0 ? hi : hi < 0 ? ci : Math.min(ci, hi);
+  const n = parseInt(sep < 0 ? id : id.slice(0, sep), 10) || 0;   // C16 atoi
+  const e = validateParams(n); if (e) return setMsg(e);
+  if (sep < 0) return newFromSeed(n, randomSeed());
+  const rest = id.slice(sep + 1);
+  if (id[sep] === "#") return newFromSeed(n, rest);
+  const e2 = validateDesc(n, rest); if (e2) return setMsg(e2);
+  startGame(n, rest, null, null);
+}
+function setMsg(s) { document.getElementById("msg").textContent = s; }
+
+const sType = document.getElementById("sType");
+[6, 10, 15, 20, 25].forEach(v => sType.add(new Option(v + " points", String(v))));   // C18 ev_f3e4cc63
+sType.add(new Option("Custom...", "custom"));          // C19
+sType.addEventListener("change", () => {
+  let n = sType.value === "custom" ? parseInt(prompt("Number of points", String(params)) || "", 10) : +sType.value; // C19 field name
+  const e = validateParams(n); if (e) { setMsg(e); sType.value = String(params); return; }
+  newFromSeed(n, randomSeed());
+});
+document.getElementById("bNew").onclick = () => newFromSeed(params, randomSeed());
+document.getElementById("bRestart").onclick = () => { if (pos > 0) { hist = hist.slice(0, pos + 1); hist.push(dupState(hist[0])); goTo(pos + 1, true); } }; // design
+document.getElementById("bUndo").onclick = () => { if (pos > 0) goTo(pos - 1, false); };
+document.getElementById("bRedo").onclick = () => { if (pos < hist.length - 1) goTo(pos + 1, false); };
+document.getElementById("bSolve").onclick = () => { const r = solveMove(hist[pos], aux); if (r.err) setMsg(r.err); else applyMove(r.move); };
+document.getElementById("bLoad").onclick = () => loadId(document.getElementById("gameid").value);
+document.getElementById("pSnap").onchange = e => { ui.snap = e.target.checked; };
+document.getElementById("pCross").onchange = e => { ui.showCross = e.target.checked; draw(); };
+document.getElementById("pStyle").onchange = e => { ui.numbers = e.target.value === "1"; draw(); };
+
+// Test and capture hook (design): window.untangle.load("10#123"), .move("P0:1,1/1"), .state()
+window.untangle = { load: loadId, move: applyMove, state: () => hist[pos], aux: () => aux, newDesc: (n, s) => newDesc(n, randomNew(s)), cross };
+const q = new URLSearchParams(location.search).get("id");
+loadId(q || "10#" + randomSeed());
+</script>
+</body>
+</html>
